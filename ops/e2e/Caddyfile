@@ -1,0 +1,11 @@
+# Local stand-in for the Pi's Caddy, used by scripts/e2e-local.sh.
+{
+	auto_https off
+	admin off
+}
+
+:80 {
+	import /etc/caddy/due-brew.caddy
+
+	respond "not found" 404
+}

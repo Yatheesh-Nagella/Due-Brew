@@ -1,0 +1,18 @@
+# Due and Brew: paste inside the site block in the Pi's Caddyfile (~/caddy/),
+# next to recipe-box's routes. Same approach as recipe-box: Caddy strips the
+# /due-brew prefix, so the API serves /api/* and nginx serves the SPA at /.
+#
+# reverse_proxy forwards request headers unchanged, including the
+# Tailscale-User-Login / Tailscale-User-Name headers that `tailscale serve`
+# adds; the API identifies housemates from that header.
+
+redir /due-brew /due-brew/ 308
+
+handle /due-brew/* {
+	uri strip_prefix /due-brew
+
+	@due_brew_api path /api/*
+	reverse_proxy @due_brew_api due-brew-api:8000
+
+	reverse_proxy due-brew-web:80
+}

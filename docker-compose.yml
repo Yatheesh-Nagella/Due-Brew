@@ -1,0 +1,64 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    env_file: ${DUE_BREW_ENV_FILE:-.env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - appnet
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: ./backend
+    restart: unless-stopped
+    env_file: ${DUE_BREW_ENV_FILE:-.env}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      appnet:
+      webnet:
+        # Caddy targets these names; plain "api"/"web" could collide with
+        # another app's services on the shared caddy_webnet network.
+        aliases: [due-brew-api]
+
+  notifier:
+    build: ./backend
+    restart: unless-stopped
+    env_file: ${DUE_BREW_ENV_FILE:-.env}
+    command: ["python", "-m", "due_brew.notifier"]
+    depends_on:
+      # The api runs migrations on start; wait for it so the schema exists.
+      api:
+        condition: service_healthy
+    networks:
+      - appnet
+
+  web:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - api
+    networks:
+      webnet:
+        aliases: [due-brew-web]
+
+networks:
+  appnet:
+  webnet:
+    external: true
+    name: caddy_webnet
+
+volumes:
+  pgdata:

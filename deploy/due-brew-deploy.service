@@ -1,0 +1,11 @@
+[Unit]
+Description=due-brew: deploy origin/main once CI has passed
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=__USER__
+Environment=REPO_DIR=__REPO_DIR__
+ExecStart=/usr/bin/env bash __REPO_DIR__/deploy/deploy.sh
+TimeoutStartSec=30min

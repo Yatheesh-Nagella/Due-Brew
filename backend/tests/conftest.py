@@ -6,7 +6,7 @@ from alembic.config import Config
 from fastapi.testclient import TestClient
 from sqlalchemy import text
 
-from due_brew.database import SessionLocal, engine
+from due_brew.database import Base, SessionLocal, engine
 
 # The suite truncates every table between tests, so refuse to run against
 # anything that isn't clearly a throwaway test database.
@@ -38,7 +38,9 @@ def clean_db():
     yield
     app.dependency_overrides.clear()
     with engine.begin() as conn:
-        conn.execute(text("TRUNCATE items, categories, users, notifier_heartbeat CASCADE"))
+        # Every model's table, so new tables are cleaned without editing this.
+        tables = ", ".join(t.name for t in Base.metadata.sorted_tables)
+        conn.execute(text(f"TRUNCATE {tables} CASCADE"))
 
 
 @pytest.fixture

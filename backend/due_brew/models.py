@@ -1,10 +1,11 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
+    Date,
     DateTime,
     ForeignKey,
     Index,
@@ -12,6 +13,7 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    UniqueConstraint,
     func,
     text,
 )
@@ -93,3 +95,98 @@ class Item(TimestampMixin, Base):
     category: Mapped[Category | None] = relationship(lazy="joined")
     added_by_user: Mapped[User] = relationship(foreign_keys=[added_by], lazy="joined")
     updated_by_user: Mapped[User] = relationship(foreign_keys=[updated_by], lazy="joined")
+
+
+class Bill(TimestampMixin, Base):
+    __tablename__ = "bills"
+    __table_args__ = (
+        CheckConstraint(
+            "recurrence IN ('monthly', 'quarterly', 'yearly', 'once')", name="ck_bills_recurrence"
+        ),
+        CheckConstraint("due_day BETWEEN 1 AND 31", name="ck_bills_due_day"),
+        CheckConstraint("due_month IS NULL OR due_month BETWEEN 1 AND 12", name="ck_bills_due_month"),
+        CheckConstraint("recurrence <> 'yearly' OR due_month IS NOT NULL", name="ck_bills_yearly_month"),
+        CheckConstraint("amount IS NULL OR amount >= 0", name="ck_bills_amount"),
+        CheckConstraint("end_date IS NULL OR end_date >= start_date", name="ck_bills_end_date"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    # NULL = a variable bill; the amount is entered on each occurrence.
+    amount: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
+    recurrence: Mapped[str] = mapped_column(String, nullable=False)
+    due_day: Mapped[int] = mapped_column(Integer, nullable=False)
+    due_month: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    start_date: Mapped[date] = mapped_column(Date, nullable=False)
+    end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    assignees: Mapped[list[User]] = relationship(
+        secondary="bill_assignees", order_by="User.display_name", lazy="selectin"
+    )
+    reminder_rules: Mapped[list["ReminderRule"]] = relationship(
+        back_populates="bill",
+        cascade="all, delete-orphan",
+        order_by="ReminderRule.days_before.desc()",
+        lazy="selectin",
+    )
+    occurrences: Mapped[list["BillOccurrence"]] = relationship(
+        back_populates="bill", cascade="all, delete-orphan", passive_deletes=True
+    )
+
+
+class BillAssignee(TimestampMixin, Base):
+    __tablename__ = "bill_assignees"
+    __table_args__ = (UniqueConstraint("bill_id", "user_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    bill_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("bills.id", ondelete="CASCADE"), nullable=False
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+
+
+class BillOccurrence(TimestampMixin, Base):
+    __tablename__ = "bill_occurrences"
+    __table_args__ = (
+        UniqueConstraint("bill_id", "due_date"),
+        CheckConstraint("amount IS NULL OR amount >= 0", name="ck_bill_occurrences_amount"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    bill_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("bills.id", ondelete="CASCADE"), nullable=False
+    )
+    due_date: Mapped[date] = mapped_column(Date, nullable=False)
+    # NULL = use the bill's amount; set for variable bills or a one-off override.
+    amount: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    paid_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )
+
+    bill: Mapped[Bill] = relationship(back_populates="occurrences", lazy="joined")
+    paid_by_user: Mapped[User | None] = relationship(lazy="joined")
+
+    @property
+    def effective_amount(self) -> Decimal | None:
+        return self.amount if self.amount is not None else self.bill.amount
+
+
+class ReminderRule(TimestampMixin, Base):
+    __tablename__ = "reminder_rules"
+    __table_args__ = (
+        UniqueConstraint("bill_id", "days_before"),
+        CheckConstraint("days_before BETWEEN 0 AND 30", name="ck_reminder_rules_days_before"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    bill_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("bills.id", ondelete="CASCADE"), nullable=False
+    )
+    days_before: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    bill: Mapped[Bill] = relationship(back_populates="reminder_rules")

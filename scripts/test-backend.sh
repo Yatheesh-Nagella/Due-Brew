@@ -3,6 +3,7 @@
 # same versions CI and the Pi use. Nothing touches the real app stack.
 #   scripts/test-backend.sh               # everything
 #   scripts/test-backend.sh -k identity   # extra args go to pytest
+#   FIX=1 scripts/test-backend.sh         # ruff format + autofix first
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -26,4 +27,4 @@ MSYS_NO_PATHCONV=1 docker run --rm --network "$NET" \
   -e PIP_DISABLE_PIP_VERSION_CHECK=1 -e PIP_ROOT_USER_ACTION=ignore \
   -v due-brew-pip-cache:/root/.cache/pip \
   python:3.12-slim sh -c "pip install -q -r requirements.txt -r requirements-dev.txt \
-    && ruff check . && ruff format --check . && pytest -p no:cacheprovider $*"
+    && ${FIX:+ruff format . && ruff check --fix . &&} ruff check . && ruff format --check . && pytest -p no:cacheprovider $*"

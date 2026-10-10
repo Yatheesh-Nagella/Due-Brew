@@ -38,7 +38,7 @@ def clean_db():
     yield
     app.dependency_overrides.clear()
     with engine.begin() as conn:
-        conn.execute(text("TRUNCATE users, notifier_heartbeat CASCADE"))
+        conn.execute(text("TRUNCATE items, categories, users, notifier_heartbeat CASCADE"))
 
 
 @pytest.fixture
@@ -100,3 +100,25 @@ def as_user(client):
         return client
 
     return _as
+
+
+@pytest.fixture
+def alice(make_user):
+    return make_user(tailscale_login="alice@example.com", display_name="Alice")
+
+
+@pytest.fixture
+def bob(make_user):
+    return make_user(tailscale_login="bob@example.com", display_name="Bob")
+
+
+@pytest.fixture
+def make_category(db):
+    def _make(name="Produce", sort_order=0):
+        category = models.Category(name=name, sort_order=sort_order)
+        db.add(category)
+        db.commit()
+        db.refresh(category)
+        return category
+
+    return _make

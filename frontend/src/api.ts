@@ -173,3 +173,93 @@ export interface GroceryList {
 export function getGroceryList(groupBy: GroupBy = 'category') {
   return request<GroceryList>(`/grocery-list?group_by=${groupBy}`)
 }
+
+export function listUsers() {
+  return request<UserBrief[]>('/users')
+}
+
+// --- bills ---
+
+export type Recurrence = 'monthly' | 'quarterly' | 'yearly' | 'once'
+
+export type OccurrenceState = 'paid' | 'overdue' | 'due_today' | 'upcoming'
+
+export interface Occurrence {
+  id: string
+  bill_id: string
+  bill_name: string
+  due_date: string // YYYY-MM-DD, a calendar date in the house's time zone
+  amount: number | null
+  variable: boolean
+  paid_at: string | null
+  paid_by_user: UserBrief | null
+  assignees: UserBrief[]
+  days_until: number
+  state: OccurrenceState
+}
+
+export interface Bill {
+  id: string
+  name: string
+  amount: number | null
+  recurrence: Recurrence
+  due_day: number
+  due_month: number | null
+  start_date: string
+  end_date: string | null
+  active: boolean
+  notes: string | null
+  assignees: UserBrief[]
+  reminder_days: number[]
+  next_occurrence: Occurrence | null
+  paid_count: number
+}
+
+export interface BillInput {
+  name: string
+  amount: number | null
+  recurrence: Recurrence
+  due_day: number | null
+  due_month: number | null
+  start_date: string | null
+  end_date: string | null
+  active: boolean
+  notes: string | null
+  assignee_ids: string[]
+  reminder_days: number[]
+}
+
+export function listBills() {
+  return request<Bill[]>('/bills')
+}
+
+export function createBill(data: BillInput) {
+  return request<Bill>('/bills', { method: 'POST', body: JSON.stringify(data) })
+}
+
+export function updateBill(id: string, data: Partial<BillInput>) {
+  return request<Bill>(`/bills/${id}`, { method: 'PATCH', body: JSON.stringify(data) })
+}
+
+export function deleteBill(id: string, confirm = false) {
+  return request<null>(`/bills/${id}${confirm ? '?confirm=true' : ''}`, { method: 'DELETE' })
+}
+
+export function getUpcoming(days = 30) {
+  return request<Occurrence[]>(`/bills/upcoming?days=${days}`)
+}
+
+export function markPaid(occurrenceId: string) {
+  return request<Occurrence>(`/occurrences/${occurrenceId}/paid`, { method: 'POST' })
+}
+
+export function undoPaid(occurrenceId: string) {
+  return request<Occurrence>(`/occurrences/${occurrenceId}/paid`, { method: 'DELETE' })
+}
+
+export function setOccurrenceAmount(occurrenceId: string, amount: number | null) {
+  return request<Occurrence>(`/occurrences/${occurrenceId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ amount }),
+  })
+}

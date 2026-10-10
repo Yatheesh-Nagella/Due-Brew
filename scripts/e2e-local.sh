@@ -72,6 +72,16 @@ check "grocery list shows it, added by Alice" \
   body_has '"added_by_user":{"id":"[^"]*","display_name":"Alice"}' "${as_alice[@]}" "$URL/due-brew/api/grocery-list"
 check "default categories were seeded" body_has '"name":"Produce"' "${as_alice[@]}" "$URL/due-brew/api/categories"
 
+alice_id=$(curl -fsS "${as_alice[@]}" "$URL/due-brew/api/me" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+check "create a monthly bill -> 201 with defaults 3 and 0" body_has '"reminder_days":\[3,0\]' "${as_alice[@]}" \
+  -X POST -d "{\"name\":\"Rent\",\"amount\":1200,\"recurrence\":\"monthly\",\"due_day\":1,\"assignee_ids\":[\"$alice_id\"]}" \
+  "$URL/due-brew/api/bills"
+occ_id=$(curl -fsS "${as_alice[@]}" "$URL/due-brew/api/bills/upcoming?days=45" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+check "upcoming lists the next rent" [ -n "$occ_id" ]
+check "mark paid records Alice" body_has '"paid_by_user":\{"id":"[^"]*","display_name":"Alice"\}' "${as_alice[@]}" \
+  -X POST "$URL/due-brew/api/occurrences/$occ_id/paid"
+check "undo paid" body_has '"paid_at":null' "${as_alice[@]}" -X DELETE "$URL/due-brew/api/occurrences/$occ_id/paid"
+
 echo
 if [ "$FAILS" -ne 0 ]; then
   echo "$FAILS check(s) failed"

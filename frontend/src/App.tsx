@@ -50,7 +50,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<ListPage />} />
             <Route path="/inventory" element={<InventoryPage />} />
-            <Route path="/bills" element={<BillsPage />} />
+            <Route path="/bills" element={<BillsPage me={me.user} />} />
             <Route path="/settings" element={<SettingsPage user={me.user} />} />
           </Routes>
         )}

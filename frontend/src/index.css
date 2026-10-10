@@ -547,3 +547,112 @@ button.add-to-list {
 .inline-form input {
   flex: 1;
 }
+
+/* --- bills --- */
+
+.summary-strip a {
+  color: var(--accent);
+}
+
+.summary-strip a.overdue-link {
+  color: var(--danger);
+}
+
+.amount {
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.amount-missing {
+  color: var(--muted);
+  font-weight: 400;
+  font-style: italic;
+}
+
+.amount-form {
+  margin: 0.25rem 0;
+}
+
+.amount-form input {
+  max-width: 8rem;
+}
+
+.badge-overdue {
+  background: var(--danger);
+  color: #fff;
+}
+
+.badge-today {
+  background: var(--accent);
+  color: #fff;
+}
+
+.overdue-heading {
+  color: var(--danger) !important;
+}
+
+.row.state-overdue {
+  border-color: var(--danger);
+}
+
+.row.state-paid {
+  opacity: 0.7;
+}
+
+.row.state-paid .row-title {
+  text-decoration: line-through;
+  text-decoration-color: var(--muted);
+}
+
+.row.inactive {
+  opacity: 0.6;
+}
+
+.chevron {
+  color: var(--muted);
+  font-size: 1.4rem;
+}
+
+fieldset {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem 0.75rem;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1.25rem;
+}
+
+legend {
+  font-size: 0.85rem;
+  color: var(--muted);
+  padding: 0 0.25rem;
+}
+
+.editor label.check,
+fieldset label.check {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 1rem;
+  color: var(--fg);
+}
+
+label.check input {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.add-reminder {
+  font-size: 0.9rem;
+  padding: 0.35rem 0.5rem;
+}
+
+.hint {
+  margin: -0.25rem 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}

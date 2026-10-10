@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { addToList, getGroceryList, markBought, type GroupBy, type Item } from '../api'
+import { Link } from 'react-router-dom'
+import { addToList, getGroceryList, getUpcoming, markBought, type GroupBy, type Item } from '../api'
 import QuickAdd from '../components/QuickAdd'
 import { useToast } from '../components/Toast'
 import { amount, byline } from '../format'
@@ -16,6 +17,8 @@ function storedGroupBy(): GroupBy {
 export default function ListPage() {
   const [groupBy, setGroupBy] = useState<GroupBy>(storedGroupBy)
   const { data, error, reload } = useLoad(() => getGroceryList(groupBy), [groupBy])
+  // "Bills this week": unpaid ones due in the next 7 days, plus any overdue.
+  const week = useLoad(() => getUpcoming(7), [])
   const [pending, setPending] = useState<Set<string>>(new Set())
   const toast = useToast()
 
@@ -54,11 +57,25 @@ export default function ListPage() {
   }
 
   const toBuy = data ? data.need_count + data.low_count : null
+  const unpaid = week.data?.filter((o) => o.state !== 'paid') ?? null
+  const billsDue = unpaid ? unpaid.length : null
+  const hasOverdue = unpaid?.some((o) => o.state === 'overdue') ?? false
 
   return (
     <section>
       <p className="summary-strip">
-        {toBuy === null ? '…' : toBuy === 0 ? 'Nothing to buy' : `${toBuy} item${toBuy === 1 ? '' : 's'} to buy`}
+        <span>
+          {toBuy === null ? '…' : toBuy === 0 ? 'Nothing to buy' : `${toBuy} item${toBuy === 1 ? '' : 's'} to buy`}
+        </span>
+        {billsDue !== null && (
+          <>
+            {' · '}
+            <Link to="/bills" className={hasOverdue ? 'overdue-link' : ''}>
+              {billsDue === 0 ? 'no bills this week' : `${billsDue} bill${billsDue === 1 ? '' : 's'} this week`}
+              {hasOverdue && ' (overdue!)'}
+            </Link>
+          </>
+        )}
       </p>
 
       <QuickAdd onAdded={added} />

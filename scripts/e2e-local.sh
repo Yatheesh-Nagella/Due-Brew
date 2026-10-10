@@ -44,7 +44,7 @@ check() {
   if "$@"; then echo "  ok   $desc"; else echo "  FAIL $desc"; FAILS=$((FAILS + 1)); fi
 }
 status_of() { curl -s -o /dev/null -w '%{http_code}' "$@"; }
-body_has() { local needle=$1; shift; curl -fsS "$@" | grep -q -- "$needle"; }
+body_has() { local needle=$1; shift; curl -fsS "$@" | grep -Eq -- "$needle"; }
 login() { echo "Tailscale-User-Login: $1"; }
 
 check "SPA served at /due-brew/" body_has '<title>Due and Brew</title>' "$URL/due-brew/"
@@ -62,6 +62,15 @@ check "OpenAPI schema reachable through Caddy" body_has '"/api/me"' "$URL/due-br
 check "notifier has written a heartbeat" \
   bash -c "curl -fsS '$URL/due-brew/api/health' | grep -vq '\"notifier_heartbeat_age_seconds\":null'"
 check "notifier --once runs a single tick" compose exec -T notifier python -m due_brew.notifier --once
+
+as_alice=(-H "$(login alice@example.com)" -H "Content-Type: application/json")
+check "quick add creates an item -> 201" \
+  [ "$(status_of "${as_alice[@]}" -X POST -d '{"name":"Oat milk"}' "$URL/due-brew/api/items")" = 201 ]
+check "same name again is merged, not duplicated -> 200" \
+  [ "$(status_of "${as_alice[@]}" -X POST -d '{"name":"oat MILK"}' "$URL/due-brew/api/items")" = 200 ]
+check "grocery list shows it, added by Alice" \
+  body_has '"added_by_user":{"id":"[^"]*","display_name":"Alice"}' "${as_alice[@]}" "$URL/due-brew/api/grocery-list"
+check "default categories were seeded" body_has '"name":"Produce"' "${as_alice[@]}" "$URL/due-brew/api/categories"
 
 echo
 if [ "$FAILS" -ne 0 ]; then

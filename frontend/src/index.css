@@ -10,6 +10,11 @@
   --accent: #c2662e;
   --surface: #f5ede3;
   --danger: #c0392b;
+  --need: #c2662e;
+  --low: #b7791f;
+  --low-bg: #fbefd9;
+  --have: #4f7a4a;
+  --have-bg: #e2efd9;
   --shadow: rgba(43, 35, 32, 0.08);
   --tabbar-height: 3.75rem;
 }
@@ -24,6 +29,11 @@
     --accent: #e0824a;
     --surface: #2a221c;
     --danger: #e57373;
+    --need: #e0824a;
+    --low: #e3a94c;
+    --low-bg: #3b2f1c;
+    --have: #8fc283;
+    --have-bg: #2f4430;
     --shadow: rgba(0, 0, 0, 0.35);
   }
 }
@@ -37,6 +47,11 @@
   --accent: #e0824a;
   --surface: #2a221c;
   --danger: #e57373;
+  --need: #e0824a;
+  --low: #e3a94c;
+  --low-bg: #3b2f1c;
+  --have: #8fc283;
+  --have-bg: #2f4430;
   --shadow: rgba(0, 0, 0, 0.35);
 }
 
@@ -167,4 +182,368 @@ button:hover {
 .tabbar a.active {
   color: var(--accent);
   box-shadow: inset 0 3px 0 var(--accent);
+}
+
+/* --- shared controls --- */
+
+input,
+select,
+textarea {
+  font: inherit;
+  /* 16px stops iOS Safari zooming in on focus. */
+  font-size: 1rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card-bg);
+  color: inherit;
+  min-width: 0;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+button.danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+button.link-button {
+  background: none;
+  border: none;
+  padding: 0.25rem;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.error {
+  color: var(--danger);
+  margin: 0.5rem 0;
+}
+
+.empty {
+  color: var(--muted);
+  text-align: center;
+  padding: 2rem 1rem;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.segmented button {
+  border: none;
+  border-radius: 0;
+  padding: 0.4rem 0.75rem;
+  background: var(--card-bg);
+  color: var(--muted);
+}
+
+.segmented button + button {
+  border-left: 1px solid var(--border);
+}
+
+.segmented button.selected {
+  background: var(--surface);
+  color: var(--fg);
+  font-weight: 600;
+}
+
+.badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  vertical-align: middle;
+  background: var(--low-bg);
+  color: var(--low);
+}
+
+/* --- list page --- */
+
+.summary-strip {
+  margin: 0 0 0.75rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: 10px;
+  background: var(--surface);
+  font-weight: 600;
+}
+
+.quick-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.quick-add input {
+  flex: 1;
+}
+
+.quick-add .error {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.list-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.list-toolbar h1 {
+  margin: 0.5rem 0;
+}
+
+.group h2 {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin: 1.25rem 0 0.4rem;
+}
+
+.rows {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 0.9rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px var(--shadow);
+}
+
+.row.is-low {
+  border-style: dashed;
+}
+
+.row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.row-title {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.row-meta {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.row-meta:empty {
+  display: none;
+}
+
+.row-by {
+  color: var(--muted);
+  font-size: 0.75rem;
+  margin: 0;
+}
+
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
+/* Big, thumb-sized target: the one action you do in the shop. */
+button.bought {
+  flex-shrink: 0;
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  border-color: var(--have);
+  color: var(--have);
+  font-weight: 600;
+}
+
+button.bought:hover {
+  background: var(--have-bg);
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--tabbar-height) + 1rem + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  width: min(calc(100% - 2rem), 480px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  background: var(--fg);
+  color: var(--bg);
+  box-shadow: 0 4px 16px var(--shadow);
+  z-index: 10;
+}
+
+.toast .link-button {
+  color: var(--bg);
+  text-decoration: underline;
+}
+
+/* --- inventory page --- */
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.5rem 0 1rem;
+}
+
+.filters input {
+  flex: 1 1 10rem;
+}
+
+.filters select {
+  flex: 1 1 10rem;
+}
+
+.inventory-row {
+  flex-wrap: wrap;
+}
+
+button.as-link {
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  font-size: inherit;
+  cursor: pointer;
+}
+
+.status-toggle button {
+  padding: 0.4rem 0.6rem;
+}
+
+.status-toggle button.selected.status-needed {
+  background: var(--need);
+  color: #fff;
+}
+
+.status-toggle button.selected.status-low {
+  background: var(--low-bg);
+  color: var(--low);
+}
+
+.status-toggle button.selected.status-have {
+  background: var(--have-bg);
+  color: var(--have);
+}
+
+button.add-to-list {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.row.editing {
+  display: block;
+}
+
+.editor {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+
+.editor label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.editor label > * {
+  color: var(--fg);
+}
+
+.span-2 {
+  grid-column: span 2;
+}
+
+.editor-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.collapsible {
+  margin-top: 1.5rem;
+}
+
+.collapsible-toggle {
+  border: none;
+  background: none;
+  padding: 0;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.category-manager {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.category-manager .row {
+  box-shadow: none;
+  padding: 0.5rem 0.75rem;
+}
+
+.inline-form {
+  display: flex;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.inline-form input {
+  flex: 1;
 }

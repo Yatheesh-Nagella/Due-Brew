@@ -7,8 +7,8 @@ it anytime (drop a line under **Inbox** and it gets picked up).
 **Legend**: `[x]` done and tested · `[ ]` to do · `[~]` built, waiting on an
 owner step · 🧪 = the test(s) that prove it · 👤 = only the owner can do it
 
-**Current milestone: M0 (skeleton)**: code done and tested locally; waiting
-on the owner steps below to deploy it.
+**Current milestone: M1 (grocery ledger)**: built and tested locally, ready
+to try. M0 still waits on the owner's Pi deploy steps below.
 
 ## Inbox
 
@@ -20,9 +20,10 @@ _Add tasks, bugs or ideas here; they get triaged into a milestone._
 
 | Command | What it checks | Last run |
 |---|---|---|
-| `bash scripts/test-backend.sh` | ruff lint + format, pytest on Python 3.12 against a throwaway Postgres 16 | 2026-10-10: 18 passed |
+| `bash scripts/test-backend.sh` | ruff lint + format, pytest on Python 3.12 against a throwaway Postgres 16 | 2026-10-10: 46 passed |
+| `bash scripts/run-local.sh` | not a test: runs the app at http://localhost:8080/due-brew/ as Alice (`--as bob`, `stop`, `reset`, `logs`) | |
 | `bash scripts/test-frontend.sh` | oxlint, `tsc` type-check, production build (node 22) | 2026-10-10: pass |
-| `bash scripts/e2e-local.sh` | whole stack in Docker behind a real Caddy using `ops/caddy/due-brew.caddy` | 2026-10-10: 12/12 checks |
+| `bash scripts/e2e-local.sh` | whole stack in Docker behind a real Caddy using `ops/caddy/due-brew.caddy` | 2026-10-10: 16/16 checks |
 | `bash deploy/test/test_deploy.sh` (Linux/CI) | deploy script vs fake GitHub API and fake docker | 2026-10-10: 24/24 checks |
 
 All four run in containers, so they behave the same on the laptop, in CI and
@@ -68,20 +69,40 @@ its name, which is another reason the frontend checks run in Docker.)
 
 ## M1: Grocery and inventory ledger
 
-- [ ] Migration: `categories`, `items` (status check needed/have/low,
-      added_by/updated_by FKs); seed default categories
-- [ ] Categories CRUD   🧪 create/rename/delete, unique name, delete with items
-- [ ] Items CRUD + filters (`status`, `category_id`)   🧪 CRUD, filters
-- [ ] Quick add (name only → `needed`)   🧪
-- [ ] Duplicate guard: same name (case-insensitive) flips the existing item
-      to `needed`   🧪 `"Milk"` then `"milk"` → one row, status needed
-- [ ] `GET /grocery-list`: needed+low grouped by category, Need before Low   🧪
-- [ ] `POST /items/{id}/bought` → have; `POST /items/{id}/add-to-list` → needed   🧪
-- [ ] added_by/updated_by set from `get_current_user`   🧪 two users, check both fields
-- [ ] Frontend: List page (quick add, grouped list, one-tap bought, Low badge)
-- [ ] Frontend: Inventory page (filters, inline status toggles, Add to list)
-- [ ] "added by Alex" shown in the UI
-- [ ] 👤 Both housemates use it from their phones
+Built ahead of the M0 Pi deploy at the owner's request (2026-10-10), on
+branch `feature/m1-grocery-ledger`.
+
+- [x] Migration `0002`: `categories` (seeded: Produce, Dairy, Meat & Fish,
+      Bakery, Pantry, Frozen, Drinks, Cleaning, Toiletries, Household) and
+      `items` (status check, `quantity >= 0`, added_by/updated_by FKs)
+      🧪 `test_categories.py::test_migration_seeds_default_categories`, migration drift test
+- [x] Categories CRUD; delete leaves its items uncategorized; reorder; 409 on
+      duplicate names   🧪 `test_categories.py` (7 tests)
+- [x] Items CRUD + filters (`status`, `category_id`), PATCH changes only sent
+      fields, blank text stored as null   🧪 `test_items.py`
+- [x] Quick add (name only → Need)   🧪 `test_quick_add_creates_a_needed_item`
+- [x] Duplicate guard via unique index on `lower(name)` + `INSERT … ON
+      CONFLICT`: 201 new / 200 merged, keeps original spelling, safe under
+      concurrent adds   🧪 `test_duplicate_*`, `test_concurrent_quick_adds_make_one_row`,
+      e2e "merged, not duplicated"
+- [x] `GET /grocery-list`: Need + Low, grouped by category (or store,
+      case-insensitive), Need before Low, counts   🧪 `test_grocery_list.py` (5 tests)
+- [x] `POST /items/{id}/bought` → Have; `/add-to-list` → Need   🧪 `test_bought_and_add_to_list`
+- [x] added_by / updated_by from `get_current_user`   🧪 `test_patch_changes_only_sent_fields_and_records_editor`
+- [x] Every route except `/api/health` requires identity
+      🧪 `test_routes_require_identity.py` (guards future routes too)
+- [x] `GET /users` (for M2 assignee pickers)
+- [x] List page: summary strip, quick add, grouped list (Aisle / Store
+      toggle, remembered), Low badge, big "✓ Bought" button with **Undo** toast,
+      "already in inventory" notice when the duplicate guard merges
+- [x] Inventory page: search, category + status filters, inline Need/Low/Have
+      toggle, "Add to list" on Have items, tap an item to edit every field or
+      delete it, "+ Add item" form, Categories section (add, rename, ↑↓, delete)
+- [x] "added by Alice · updated by Bob" shown on every item
+- [ ] 👤 Try it locally (`bash scripts/run-local.sh`) and say what to change
+- [ ] 👤 Both housemates use it from their phones (after the Pi deploy)
+- Ideas, not committed to: suggest a category on quick add from past items;
+  swipe-to-buy on the List page
 
 ## M2: Bills without reminders
 

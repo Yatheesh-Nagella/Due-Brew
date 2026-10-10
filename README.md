@@ -29,6 +29,8 @@ scripts/                  test-backend.sh · test-frontend.sh · e2e-local.sh
 ## Local development
 
 ```bash
+bash scripts/run-local.sh         # the app at http://localhost:8080/due-brew/ (you are Alice)
+bash scripts/run-local.sh --as bob   # same, as Bob · `stop` · `reset` · `logs`
 bash scripts/test-backend.sh      # ruff + pytest (Docker)
 bash scripts/test-frontend.sh     # lint + type-check + build (Docker)
 bash scripts/e2e-local.sh         # full stack behind Caddy; KEEP=1 to leave it up

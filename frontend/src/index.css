@@ -1,0 +1,170 @@
+/* Warm palette and theme mechanics carried over from recipe-box. */
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, sans-serif;
+  --bg: #fdfaf6;
+  --fg: #2b2320;
+  --card-bg: #ffffff;
+  --border: #e8ddd0;
+  --muted: #8a7c6d;
+  --accent: #c2662e;
+  --surface: #f5ede3;
+  --danger: #c0392b;
+  --shadow: rgba(43, 35, 32, 0.08);
+  --tabbar-height: 3.75rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1c1712;
+    --fg: #f1e9e0;
+    --card-bg: #241d18;
+    --border: #3a2f27;
+    --muted: #b0a292;
+    --accent: #e0824a;
+    --surface: #2a221c;
+    --danger: #e57373;
+    --shadow: rgba(0, 0, 0, 0.35);
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #1c1712;
+  --fg: #f1e9e0;
+  --card-bg: #241d18;
+  --border: #3a2f27;
+  --muted: #b0a292;
+  --accent: #e0824a;
+  --surface: #2a221c;
+  --danger: #e57373;
+  --shadow: rgba(0, 0, 0, 0.35);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+a {
+  color: var(--accent);
+}
+
+h1,
+h2 {
+  letter-spacing: -0.01em;
+}
+
+h1 {
+  font-size: 1.5rem;
+}
+
+h2 {
+  font-size: 1.1rem;
+  margin-top: 0;
+}
+
+.app {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 1rem calc(var(--tabbar-height) + 2rem + env(safe-area-inset-bottom));
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1rem;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.brand {
+  font-weight: bold;
+  font-size: 1.25rem;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+button {
+  padding: 0.45rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card-bg);
+  cursor: pointer;
+  color: inherit;
+  font-size: 0.9rem;
+}
+
+button:hover {
+  border-color: var(--accent);
+}
+
+.card {
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px var(--shadow);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.4rem 1rem;
+  margin: 0;
+}
+
+.facts dt {
+  color: var(--muted);
+}
+
+.facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Bottom tab bar: phones are the main client, so the four destinations sit
+   under the thumb. */
+.tabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  background: var(--card-bg);
+  border-top: 1px solid var(--border);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.tabbar a {
+  flex: 1;
+  max-width: 180px;
+  height: var(--tabbar-height);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.tabbar a.active {
+  color: var(--accent);
+  box-shadow: inset 0 3px 0 var(--accent);
+}

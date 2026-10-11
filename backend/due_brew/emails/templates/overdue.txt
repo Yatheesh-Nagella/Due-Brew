@@ -1,0 +1,9 @@
+Hi {{ recipient }},
+
+{{ bill.name }} was due {{ bill.when }} and hasn't been marked paid.
+
+  Amount: {{ bill.amount }}
+  Due:    {{ bill.due }}
+  For:    {{ bill.assignees }}
+
+If it's paid, mark it in Due and Brew so the reminders stop: {{ bills_url }}

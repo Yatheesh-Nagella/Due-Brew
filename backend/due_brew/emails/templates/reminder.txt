@@ -1,0 +1,12 @@
+Hi {{ recipient }},
+
+{{ bill.name }} is due {{ bill.when }}.
+{% if bill.late %}
+(This reminder is late: the house server was offline when it was meant to go out.)
+{% endif %}
+
+  Amount: {{ bill.amount }}
+  Due:    {{ bill.due }}
+  For:    {{ bill.assignees }}
+
+Mark it paid in Due and Brew: {{ bills_url }}

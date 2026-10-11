@@ -1,0 +1,20 @@
+Hi {{ recipient }},
+
+{{ subject | replace("[due-brew] ", "") }}.
+{% if overdue %}
+
+OVERDUE
+{% for bill in overdue %}
+- {{ bill.name }}: {{ bill.amount }}, was due {{ bill.due }} ({{ bill.when }}). For {{ bill.assignees }}.
+{% endfor %}
+{% endif %}
+{% if due %}
+
+COMING UP
+{% for bill in due %}
+- {{ bill.name }}: {{ bill.amount }}, due {{ bill.when }} ({{ bill.due }}). For {{ bill.assignees }}.{% if bill.late %} (late reminder){% endif %}
+
+{% endfor %}
+{% endif %}
+
+Open Bills: {{ bills_url }}

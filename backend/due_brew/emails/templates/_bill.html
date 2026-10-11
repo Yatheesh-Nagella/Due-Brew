@@ -1,0 +1,5 @@
+<table style="border-collapse:collapse;margin:12px 0;font-size:15px;">
+  <tr><td style="padding:2px 16px 2px 0;color:#8a7c6d;">Amount</td><td style="padding:2px 0;{% if bill.amount_missing %}font-style:italic;color:#8a7c6d;{% else %}font-weight:600;{% endif %}">{{ bill.amount }}</td></tr>
+  <tr><td style="padding:2px 16px 2px 0;color:#8a7c6d;">Due</td><td style="padding:2px 0;">{{ bill.due }}</td></tr>
+  <tr><td style="padding:2px 16px 2px 0;color:#8a7c6d;">For</td><td style="padding:2px 0;">{{ bill.assignees }}</td></tr>
+</table>

@@ -1,0 +1,6 @@
+Hi {{ recipient }},
+
+This is a test email from Due and Brew. If you're reading it, bill reminders
+will reach you at this address.
+
+Reminder settings: {{ settings_url }}

@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block body %}
+<p style="margin:0 0 4px;">Hi {{ recipient }},</p>
+<h1 style="margin:8px 0;font-size:20px;">{{ bill.name }} is due {{ bill.when }}</h1>
+{% if bill.late %}
+<p style="margin:0;font-size:14px;color:#b7791f;">This reminder is late: the house server was offline when it was meant to go out.</p>
+{% endif %}
+{% include "_bill.html" %}
+{% include "_button.html" %}
+{% endblock %}

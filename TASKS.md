@@ -7,8 +7,8 @@ it anytime (drop a line under **Inbox** and it gets picked up).
 **Legend**: `[x]` done and tested · `[ ]` to do · `[~]` built, waiting on an
 owner step · 🧪 = the test(s) that prove it · 👤 = only the owner can do it
 
-**Current milestone: M1 (grocery ledger)**: built and tested locally, ready
-to try. M0 still waits on the owner's Pi deploy steps below.
+**Current milestone: M2 (bills)**: built and tested locally, ready to try.
+M1 is in a PR; M0 still waits on the owner's Pi deploy steps below.
 
 ## Inbox
 
@@ -20,10 +20,10 @@ _Add tasks, bugs or ideas here; they get triaged into a milestone._
 
 | Command | What it checks | Last run |
 |---|---|---|
-| `bash scripts/test-backend.sh` | ruff lint + format, pytest on Python 3.12 against a throwaway Postgres 16 | 2026-10-10: 46 passed |
+| `bash scripts/test-backend.sh` | ruff lint + format, pytest on Python 3.12 against a throwaway Postgres 16 | 2026-10-10: 105 passed |
 | `bash scripts/run-local.sh` | not a test: runs the app at http://localhost:8080/due-brew/ as Alice (`--as bob`, `stop`, `reset`, `logs`) | |
 | `bash scripts/test-frontend.sh` | oxlint, `tsc` type-check, production build (node 22) | 2026-10-10: pass |
-| `bash scripts/e2e-local.sh` | whole stack in Docker behind a real Caddy using `ops/caddy/due-brew.caddy` | 2026-10-10: 16/16 checks |
+| `bash scripts/e2e-local.sh` | whole stack in Docker behind a real Caddy using `ops/caddy/due-brew.caddy` | 2026-10-10: 20/20 checks |
 | `bash deploy/test/test_deploy.sh` (Linux/CI) | deploy script vs fake GitHub API and fake docker | 2026-10-10: 24/24 checks |
 
 All four run in containers, so they behave the same on the laptop, in CI and
@@ -106,15 +106,42 @@ branch `feature/m1-grocery-ledger`.
 
 ## M2: Bills without reminders
 
-- [ ] Migration: `bills`, `bill_assignees`, `bill_occurrences`, `reminder_rules`
-- [ ] Recurrence engine (pure function)   🧪 monthly/quarterly/yearly/once,
-      due_day 29–31 in short months, leap years, end_date cut-off
-- [ ] Bills CRUD with assignees + reminder rules (defaults 3 and 0; API accepts 0–30)   🧪
-- [ ] Occurrence generation on bill save (horizon 60 days), idempotent   🧪
-- [ ] `GET /bills/upcoming?days=`: upcoming + overdue unpaid   🧪
-- [ ] Mark paid / undo; variable amount on occurrence   🧪
-- [ ] Delete with paid history requires confirmation; deactivate preferred   🧪
-- [ ] Frontend: Bills page; home-page summary strip
+On branch `feature/m2-bills` (stacked on M1).
+
+- [x] Recurrence engine `due_brew/recurrence.py` (pure functions)
+      🧪 `test_recurrence.py` (19): monthly, quarterly, yearly, once; due_day
+      28–31 in every short month; Feb 29 in leap / non-leap years; start and
+      end dates inclusive; windows across year boundaries
+- [x] Migration `0003`: `bills`, `bill_assignees`, `bill_occurrences`
+      (unique bill + due date), `reminder_rules` (0–30, unique per bill),
+      check constraints mirroring the API rules
+- [x] Bills CRUD with assignees (≥1) and reminder days (default 3 and 0,
+      API accepts 0–30, deduped)   🧪 `test_bills.py` create/edit/invalid (12 invalid cases)
+- [x] Occurrence generation `bills.sync_occurrences`: runs on bill save and
+      before bill listings (so the 60-day horizon rolls forward without the
+      notifier); edits move unpaid future rows, never paid ones; idempotent
+      🧪 `test_changing_due_day_moves_unpaid_but_keeps_paid`,
+      `test_horizon_rolls_forward_as_days_pass`, `test_syncing_twice_changes_nothing`
+- [x] Deactivate (hides it, drops future unpaid rows, reactivating restores);
+      delete with paid history → 409 unless `confirm=true`
+      🧪 `test_deactivate_*`, `test_delete_with_paid_history_needs_confirmation`
+- [x] `GET /bills/upcoming?days=`: due in window (paid or not) + overdue unpaid,
+      active bills only   🧪 `test_upcoming_window_overdue_and_paid`, `test_overdue_stays_until_paid`
+- [x] Mark paid / undo (second "paid" keeps the first payer)   🧪 `test_mark_paid_and_undo`
+- [x] Variable amounts on the occurrence; one-off overrides survive a bill
+      amount change   🧪 `test_variable_bill_amount_on_occurrence`, `test_override_survives_bill_amount_change`
+- [x] Dates are local calendar dates in `TZ`   🧪 `test_due_dates_are_plain_dates_in_local_tz`
+- [x] Bills page: Overdue section, next 30 days with **✓ Paid** / Undo,
+      "Set amount" on variable bills, all bills with schedule text
+      ("Monthly on the 1st"), next due, assignees, Inactive badge; tap to edit
+- [x] Bill editor: amount (blank = varies), repeats, due day (29–31 notes
+      "or last day of month"), month for yearly, start/end dates, assignees,
+      reminders as pre-checked "3 days before" + "On due date" with
+      "+ Add reminder" offering 1, 2, 5, 7 days; Active toggle; two-step delete
+- [x] Home summary strip: "5 items to buy · 2 bills this week" linking to
+      Bills, red when something's overdue
+- [x] e2e: create bill, upcoming, mark paid, undo through Caddy
+- [ ] 👤 Try it locally and merge the PR
 
 ## M3: Email reminders
 
@@ -171,6 +198,12 @@ Each one is easy to change; say so if you disagree.
 | 11 | No host ports at all (recipe-box publishes `127.0.0.1:8000`) | spec says so; post-deploy health check goes through Caddy instead |
 | 12 | Deploy timer **every 6h**, copied from recipe-box | spec says 5 min, but you slowed recipe-box to 6h on purpose. Change `OnUnitInactiveSec` if you want faster deploys while building |
 | 13 | psycopg 3 (`postgresql+psycopg://`) | spec's `DATABASE_URL`; recipe-box uses psycopg2 |
+| 14 | Quarterly bills repeat every 3 months **counting from the start date's month** | spec only gives due_day; the editor says so |
+| 15 | One-off bills are due on their **start date** (due_day is set from it) | spec has no separate date field for "once" |
+| 16 | Occurrences generate from **7 days back** through the horizon | a bill entered just after its due date should show as overdue; older ones don't flood the list |
+| 17 | Occurrence `amount` NULL means "use the bill's amount" | bill amount edits flow to future dues; variable bills and one-off overrides set it explicitly |
+| 18 | Occurrences also sync when bills are listed, not only on save | otherwise the 60-day horizon goes stale until the notifier arrives in M3 |
+| 19 | Upcoming/overdue shows only **active** bills; overdue shows until paid (the 7-day limit applies to reminder emails) | deactivating should stop the nagging |
 
 ## Risks / things to verify on the real Pi
 

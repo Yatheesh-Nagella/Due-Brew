@@ -15,6 +15,7 @@ class Settings:
     now_override: str | None
     notifier_interval_seconds: int
     notifier_dry_run: bool
+    occurrence_horizon_days: int
     seed_users: str
 
     @property
@@ -33,5 +34,6 @@ def get_settings() -> Settings:
         now_override=os.environ.get("NOW_OVERRIDE") or None,
         notifier_interval_seconds=int(os.environ.get("NOTIFIER_INTERVAL_SECONDS", "300")),
         notifier_dry_run=_bool(os.environ.get("NOTIFIER_DRY_RUN")),
+        occurrence_horizon_days=int(os.environ.get("OCCURRENCE_HORIZON_DAYS", "60")),
         seed_users=os.environ.get("SEED_USERS", ""),
     )

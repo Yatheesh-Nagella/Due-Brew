@@ -31,10 +31,23 @@ class UserOut(BaseModel):
     email_enabled: bool
 
 
+EmailAddress = Annotated[str, StringConstraints(strip_whitespace=True, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")]
+
+
+class MeUpdate(BaseModel):
+    """PATCH /me: only the fields sent are changed."""
+
+    email: EmailAddress | None = None
+    notify_mode: NotifyMode | None = None
+    digest_hour: int | None = Field(default=None, ge=0, le=23)
+    email_enabled: bool | None = None
+
+
 class HealthOut(BaseModel):
     status: str
     db: str
     notifier_heartbeat_age_seconds: float | None
+    notifier_interval_seconds: int
 
 
 class UserBrief(BaseModel):
@@ -227,3 +240,19 @@ class BillOut(BaseModel):
 
 class OccurrenceUpdate(BaseModel):
     amount: Money | None
+
+
+class NotificationOut(BaseModel):
+    id: uuid.UUID
+    kind: str  # reminder | overdue | digest | test
+    status: str  # pending | sent | failed | skipped
+    user: UserBrief
+    to: str
+    subject: str | None
+    bill_name: str | None
+    due_date: date | None
+    items: int  # bills a digest covered; 1 for a single email
+    attempts: int
+    last_error: str | None
+    created_at: datetime
+    sent_at: datetime | None

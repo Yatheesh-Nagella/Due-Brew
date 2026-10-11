@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Run the whole app on this laptop, behind Caddy like on the Pi, at
-# http://localhost:8080/due-brew/ in development mode (you are Alice).
+# http://localhost:8080/due-brew/ in development mode (you are Alice), with
+# emails caught by a local Mailpit inbox at http://localhost:8025.
 # Data persists between runs in its own Docker volume.
 #   scripts/run-local.sh             # build + start (or restart after code changes)
 #   scripts/run-local.sh --as bob    # act as Bob instead
@@ -12,9 +13,11 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CADDY=due-brew-local-caddy
 URL=http://localhost:8080/due-brew/
-export COMPOSE_PROJECT_NAME=due-brew-local DUE_BREW_ENV_FILE=ops/local/local.env
+# Own Caddy network: a shared one would let another due-brew stack (e.g. the
+# e2e run) answer to the same due-brew-api alias.
+export COMPOSE_PROJECT_NAME=due-brew-local DUE_BREW_ENV_FILE=ops/local/local.env CADDY_NETWORK=due-brew-local-web
 
-compose() { docker compose -f "$ROOT/docker-compose.yml" "$@"; }
+compose() { docker compose -f "$ROOT/docker-compose.yml" -f "$ROOT/ops/local/mailpit.compose.yml" "$@"; }
 
 case "${1:-}" in
   stop)
@@ -37,7 +40,7 @@ case "${1:-}" in
     ;;
 esac
 
-docker network inspect caddy_webnet >/dev/null 2>&1 || docker network create caddy_webnet >/dev/null
+docker network inspect "$CADDY_NETWORK" >/dev/null 2>&1 || docker network create "$CADDY_NETWORK" >/dev/null
 if [ -n "${DEV_USER_LOGIN:-}" ]; then
   # Rewrite the identity into a temporary env file so containers pick it up.
   tmp="$ROOT/ops/local/.local-override.env"
@@ -47,7 +50,7 @@ fi
 compose up -d --build --wait
 
 docker rm -f "$CADDY" >/dev/null 2>&1 || true
-MSYS_NO_PATHCONV=1 docker run -d --name "$CADDY" --network caddy_webnet -p 127.0.0.1:8080:80 \
+MSYS_NO_PATHCONV=1 docker run -d --name "$CADDY" --network "$CADDY_NETWORK" -p 127.0.0.1:8080:80 \
   -v "$ROOT/ops/e2e/Caddyfile:/etc/caddy/Caddyfile:ro" \
   -v "$ROOT/ops/caddy/due-brew.caddy:/etc/caddy/due-brew.caddy:ro" \
   caddy:2 >/dev/null
@@ -56,5 +59,6 @@ for _ in $(seq 1 30); do curl -fs "${URL}api/health" >/dev/null 2>&1 && break; s
 echo
 echo "Due and Brew is running: $URL"
 echo "  API docs:  ${URL}api/docs"
+echo "  inbox:     http://localhost:8025  (every email the app sends lands here)"
 echo "  logs:      scripts/run-local.sh logs"
 echo "  stop:      scripts/run-local.sh stop"

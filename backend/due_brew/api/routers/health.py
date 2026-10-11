@@ -3,6 +3,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from due_brew import clock, heartbeat, schemas
+from due_brew.config import get_settings
 from due_brew.database import get_db
 
 router = APIRouter(prefix="/api", tags=["health"])
@@ -13,12 +14,20 @@ router = APIRouter(prefix="/api", tags=["health"])
 # beyond "up or down".
 @router.get("/health", response_model=schemas.HealthOut)
 def health(response: Response, db: Session = Depends(get_db)):
+    interval = get_settings().notifier_interval_seconds
     try:
         db.execute(text("SELECT 1"))
         last = heartbeat.last_beat(db)
     except Exception:
         response.status_code = 503
-        return schemas.HealthOut(status="error", db="unreachable", notifier_heartbeat_age_seconds=None)
+        return schemas.HealthOut(
+            status="error",
+            db="unreachable",
+            notifier_heartbeat_age_seconds=None,
+            notifier_interval_seconds=interval,
+        )
 
     age = (clock.now() - last).total_seconds() if last else None
-    return schemas.HealthOut(status="ok", db="ok", notifier_heartbeat_age_seconds=age)
+    return schemas.HealthOut(
+        status="ok", db="ok", notifier_heartbeat_age_seconds=age, notifier_interval_seconds=interval
+    )

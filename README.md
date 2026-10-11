@@ -36,6 +36,10 @@ bash scripts/test-frontend.sh     # lint + type-check + build (Docker)
 bash scripts/e2e-local.sh         # full stack behind Caddy; KEEP=1 to leave it up
 ```
 
+Every email the local app sends lands in a Mailpit inbox at
+<http://localhost:8025> (local only; the Pi sends through Gmail, see
+`DEPLOY.md` §6).
+
 `KEEP=1 bash scripts/e2e-local.sh` serves the app at
 <http://localhost:8088/due-brew/>. Browsers don't send the Tailscale
 header, so the UI shows "Not recognized" there; use `curl -H

@@ -190,3 +190,72 @@ class ReminderRule(TimestampMixin, Base):
     days_before: Mapped[int] = mapped_column(Integer, nullable=False)
 
     bill: Mapped[Bill] = relationship(back_populates="reminder_rules")
+
+
+NOTIFICATION_KINDS = ("reminder", "overdue", "digest", "test")
+NOTIFICATION_STATUSES = ("pending", "sent", "failed", "skipped")
+
+
+class NotificationLog(TimestampMixin, Base):
+    """One row per email the notifier owes someone. Inserting the row *claims*
+    the send; the partial unique indexes below are what make sending idempotent:
+    a second tick's INSERT ... ON CONFLICT DO NOTHING simply finds it taken."""
+
+    __tablename__ = "notification_log"
+    __table_args__ = (
+        CheckConstraint("kind IN ('reminder', 'overdue', 'digest', 'test')", name="ck_notification_log_kind"),
+        CheckConstraint(
+            "status IN ('pending', 'sent', 'failed', 'skipped')", name="ck_notification_log_status"
+        ),
+        Index(
+            "uq_notification_log_reminder",
+            "occurrence_id",
+            "rule_id",
+            "user_id",
+            unique=True,
+            postgresql_where=text("kind = 'reminder'"),
+        ),
+        Index(
+            "uq_notification_log_overdue",
+            "occurrence_id",
+            "user_id",
+            unique=True,
+            postgresql_where=text("kind = 'overdue'"),
+        ),
+        Index(
+            "uq_notification_log_digest",
+            "user_id",
+            "digest_date",
+            unique=True,
+            postgresql_where=text("kind = 'digest'"),
+        ),
+        Index("ix_notification_log_created_at", "created_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    occurrence_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("bill_occurrences.id", ondelete="CASCADE"), nullable=True
+    )
+    # SET NULL keeps the history when a reminder rule is removed from a bill.
+    rule_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("reminder_rules.id", ondelete="SET NULL"), nullable=True
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    kind: Mapped[str] = mapped_column(String, nullable=False)
+    digest_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    # Reminder/overdue rows sent as part of a digest point at that digest's row.
+    digest_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("notification_log.id", ondelete="CASCADE"), nullable=True
+    )
+    status: Mapped[str] = mapped_column(String, nullable=False, server_default="pending")
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    subject: Mapped[str | None] = mapped_column(Text, nullable=True)
+    claimed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    next_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    user: Mapped[User] = relationship(lazy="joined")
+    occurrence: Mapped[BillOccurrence | None] = relationship(lazy="joined")

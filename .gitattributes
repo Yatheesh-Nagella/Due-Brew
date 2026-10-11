@@ -1,3 +1,4 @@
-deploy/** text eol=lf
-scripts/** text eol=lf
-*.sh text eol=lf
+# Every text file is LF in the repo and on disk, whatever the OS.
+* text=auto eol=lf
+*.png binary
+*.ico binary

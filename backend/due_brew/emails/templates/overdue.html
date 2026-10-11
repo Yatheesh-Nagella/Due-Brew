@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block body %}
+<p style="margin:0 0 4px;">Hi {{ recipient }},</p>
+<h1 style="margin:8px 0;font-size:20px;color:#c0392b;">{{ bill.name }} is overdue</h1>
+<p style="margin:0;">It was due {{ bill.when }} and hasn't been marked paid.</p>
+{% include "_bill.html" %}
+<p style="margin:0;font-size:14px;color:#8a7c6d;">If it's paid, mark it so the reminders stop.</p>
+{% include "_button.html" %}
+{% endblock %}

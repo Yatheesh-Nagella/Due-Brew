@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% macro rows(bills, overdue) %}
+<table style="border-collapse:collapse;width:100%;margin:8px 0 16px;font-size:15px;">
+  {% for bill in bills %}
+  <tr>
+    <td style="padding:8px 0;border-top:1px solid #e8ddd0;">
+      <strong>{{ bill.name }}</strong>{% if bill.late %} <span style="font-size:12px;color:#b7791f;">(late reminder)</span>{% endif %}<br>
+      <span style="color:#8a7c6d;font-size:14px;">{{ "was due" if overdue else "due" }} {{ bill.when }} · {{ bill.due }} · for {{ bill.assignees }}</span>
+    </td>
+    <td style="padding:8px 0;border-top:1px solid #e8ddd0;text-align:right;white-space:nowrap;{% if bill.amount_missing %}font-style:italic;color:#8a7c6d;{% else %}font-weight:600;{% endif %}">{{ bill.amount }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endmacro %}
+{% block body %}
+<p style="margin:0 0 4px;">Hi {{ recipient }},</p>
+<h1 style="margin:8px 0 16px;font-size:20px;">{{ subject | replace("[due-brew] ", "") }}</h1>
+{% if overdue %}
+<h2 style="margin:0;font-size:13px;letter-spacing:0.06em;text-transform:uppercase;color:#c0392b;">Overdue</h2>
+{{ rows(overdue, true) }}
+{% endif %}
+{% if due %}
+<h2 style="margin:0;font-size:13px;letter-spacing:0.06em;text-transform:uppercase;color:#8a7c6d;">Coming up</h2>
+{{ rows(due, false) }}
+{% endif %}
+{% include "_button.html" %}
+{% endblock %}

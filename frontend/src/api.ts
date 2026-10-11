@@ -46,6 +46,7 @@ export interface Health {
   status: string
   db: string
   notifier_heartbeat_age_seconds: number | null
+  notifier_interval_seconds: number
 }
 
 export function getMe() {
@@ -262,4 +263,44 @@ export function setOccurrenceAmount(occurrenceId: string, amount: number | null)
     method: 'PATCH',
     body: JSON.stringify({ amount }),
   })
+}
+
+// --- settings & notifications ---
+
+export interface MeUpdate {
+  email?: string
+  notify_mode?: NotifyMode
+  digest_hour?: number
+  email_enabled?: boolean
+}
+
+export function updateMe(data: MeUpdate) {
+  return request<User>('/me', { method: 'PATCH', body: JSON.stringify(data) })
+}
+
+export type NotificationKind = 'reminder' | 'overdue' | 'digest' | 'test'
+export type NotificationStatus = 'pending' | 'sent' | 'failed' | 'skipped'
+
+export interface Notification {
+  id: string
+  kind: NotificationKind
+  status: NotificationStatus
+  user: UserBrief
+  to: string
+  subject: string | null
+  bill_name: string | null
+  due_date: string | null
+  items: number
+  attempts: number
+  last_error: string | null
+  created_at: string
+  sent_at: string | null
+}
+
+export function listNotifications(limit = 50) {
+  return request<Notification[]>(`/notifications?limit=${limit}`)
+}
+
+export function sendTestEmail() {
+  return request<Notification>('/notifications/test', { method: 'POST' })
 }

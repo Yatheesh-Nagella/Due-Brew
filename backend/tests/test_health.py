@@ -10,7 +10,12 @@ def test_health_needs_no_identity(client, env):
     res = client.get("/api/health")
 
     assert res.status_code == 200
-    assert res.json() == {"status": "ok", "db": "ok", "notifier_heartbeat_age_seconds": None}
+    assert res.json() == {
+        "status": "ok",
+        "db": "ok",
+        "notifier_heartbeat_age_seconds": None,
+        "notifier_interval_seconds": 300,
+    }
 
 
 def test_health_reports_heartbeat_age(client, db, env):

@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block body %}
+<p style="margin:0 0 4px;">Hi {{ recipient }},</p>
+<h1 style="margin:8px 0;font-size:20px;">It works 🎉</h1>
+<p style="margin:0;">This is a test email from Due and Brew. If you're reading it, bill reminders will reach you at this address.</p>
+<p style="margin:20px 0 0;"><a href="{{ settings_url }}" style="color:#c2662e;">Reminder settings</a></p>
+{% endblock %}

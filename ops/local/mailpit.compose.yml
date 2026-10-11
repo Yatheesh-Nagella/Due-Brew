@@ -1,0 +1,11 @@
+# Local/e2e only, never on the Pi: a fake inbox that catches every email the
+# app sends. Layered on top of docker-compose.yml by scripts/run-local.sh and
+# scripts/e2e-local.sh; read the mail at http://localhost:8025.
+services:
+  mailpit:
+    image: axllent/mailpit:v1.27
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${MAILPIT_PORT:-8025}:8025"
+    networks:
+      - appnet

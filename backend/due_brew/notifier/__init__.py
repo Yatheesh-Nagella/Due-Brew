@@ -2,22 +2,25 @@ import logging
 import signal
 import threading
 
-from due_brew import heartbeat
 from due_brew.config import get_settings
 from due_brew.database import SessionLocal
+from due_brew.emails.sender import get_sender
+from due_brew.notifier.tick import run_tick
 
 log = logging.getLogger(__name__)
 
 
 def tick() -> None:
-    """One pass of the notifier. M0: heartbeat only; reminders arrive in M3."""
+    """One pass of the notifier: occurrences, reminders, retries, heartbeat."""
     with SessionLocal() as db:
-        heartbeat.beat(db)
+        run_tick(db, get_sender())
 
 
 def run_forever(stop: threading.Event) -> None:
-    interval = get_settings().notifier_interval_seconds
-    log.info("notifier started; ticking every %ss", interval)
+    settings = get_settings()
+    interval = settings.notifier_interval_seconds
+    mode = "DRY RUN (logging, not sending)" if settings.notifier_dry_run else f"SMTP via {settings.smtp_host}"
+    log.info("notifier started; ticking every %ss; %s", interval, mode)
     while not stop.is_set():
         try:
             tick()

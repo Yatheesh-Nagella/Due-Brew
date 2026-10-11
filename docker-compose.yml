@@ -58,7 +58,9 @@ networks:
   appnet:
   webnet:
     external: true
-    name: caddy_webnet
+    # The Pi's Caddy network. Local test stacks each get their own, so two
+    # stacks never answer to the same due-brew-api alias.
+    name: ${CADDY_NETWORK:-caddy_webnet}
 
 volumes:
   pgdata:

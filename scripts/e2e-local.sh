@@ -11,12 +11,13 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 E2E="$ROOT/ops/e2e"
 PROJECT=due-brew-e2e
 CADDY=due-brew-e2e-caddy
-NET=caddy_webnet
+NET=due-brew-e2e-web  # its own Caddy network; see run-local.sh
 URL=http://localhost:8088
 # Separate compose project and env file, so a real .env is never touched.
-export COMPOSE_PROJECT_NAME=$PROJECT DUE_BREW_ENV_FILE=ops/e2e/e2e.env
+export COMPOSE_PROJECT_NAME=$PROJECT DUE_BREW_ENV_FILE=ops/e2e/e2e.env MAILPIT_PORT=8026 CADDY_NETWORK=$NET
+MAILPIT=http://localhost:8026
 
-compose() { docker compose -f "$ROOT/docker-compose.yml" "$@"; }
+compose() { docker compose -f "$ROOT/docker-compose.yml" -f "$ROOT/ops/local/mailpit.compose.yml" "$@"; }
 
 cleanup() {
   if [ -n "${KEEP:-}" ]; then
@@ -81,6 +82,18 @@ check "upcoming lists the next rent" [ -n "$occ_id" ]
 check "mark paid records Alice" body_has '"paid_by_user":\{"id":"[^"]*","display_name":"Alice"\}' "${as_alice[@]}" \
   -X POST "$URL/due-brew/api/occurrences/$occ_id/paid"
 check "undo paid" body_has '"paid_at":null' "${as_alice[@]}" -X DELETE "$URL/due-brew/api/occurrences/$occ_id/paid"
+
+# Reminders through the real notifier, real SMTP (to Mailpit) and real Postgres.
+# Alice's reminder hour -> midnight, so "due today" fires whenever this runs.
+compose exec -T db psql -q -U duebrew -d duebrew -c "UPDATE users SET digest_hour = 0" >/dev/null
+check "one-off bill due today" body_has '"recurrence":"once"' "${as_alice[@]}" -X POST \
+  -d "{\"name\":\"Plumber\",\"amount\":150,\"recurrence\":\"once\",\"assignee_ids\":[\"$alice_id\"],\"reminder_days\":[0]}" \
+  "$URL/due-brew/api/bills"
+check "notifier tick sends it" compose exec -T notifier python -m due_brew.notifier --once
+check "notifier tick again" compose exec -T notifier python -m due_brew.notifier --once
+mail_count() { curl -fsS "$MAILPIT/api/v1/messages" | grep -o 'Plumber due today' | wc -l | tr -d ' '; }
+check "exactly one reminder email reached the inbox" [ "$(mail_count)" = 1 ]
+check "addressed to Alice" body_has '"Address":"alice@example.com"' "$MAILPIT/api/v1/messages"
 
 echo
 if [ "$FAILS" -ne 0 ]; then

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -12,6 +12,20 @@ router = APIRouter(prefix="/api", tags=["users"])
 @router.get("/me", response_model=schemas.UserOut)
 def get_me(user: models.User = Depends(get_current_user)):
     return user
+
+
+@router.patch("/me", response_model=schemas.UserOut)
+def update_me(
+    body: schemas.MeUpdate, db: Session = Depends(get_db), user: models.User = Depends(get_current_user)
+):
+    me = db.merge(user)
+    for field, value in body.model_dump(exclude_unset=True).items():
+        if value is None:
+            raise HTTPException(status_code=422, detail=f"{field} cannot be empty")
+        setattr(me, field, value.value if isinstance(value, schemas.NotifyMode) else value)
+    db.commit()
+    db.refresh(me)
+    return me
 
 
 @router.get("/users", response_model=list[schemas.UserBrief])

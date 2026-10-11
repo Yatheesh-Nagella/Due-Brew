@@ -82,7 +82,56 @@ GitHub check on that commit has passed. State lives in `~/.due-brew-deploy/`.
 
 Manual fallback: `cd ~/due-brew && git pull && docker compose up -d --build`.
 
+## 6. Email reminders (Gmail)
+
+Reminders go out from a dedicated house Gmail account through an **app
+password**. Never use the account's real password: an app password can only
+send mail and can be revoked on its own.
+
+1. Create (or pick) the house Gmail account.
+2. Turn on **2-Step Verification** for it (Google Account → Security). App
+   passwords only exist once 2-Step Verification is on.
+3. Google Account → Security → **App passwords** (or visit
+   `myaccount.google.com/apppasswords`), create one called "Due and Brew",
+   and copy the 16-character password.
+4. On the Pi, in `~/due-brew/.env`:
+
+   ```bash
+   SMTP_HOST=smtp.gmail.com
+   SMTP_PORT=587
+   SMTP_STARTTLS=true
+   SMTP_USERNAME=the-house-account@gmail.com
+   SMTP_PASSWORD=abcdefghijklmnop        # the app password, spaces removed
+   EMAIL_FROM=Due and Brew <the-house-account@gmail.com>
+   NOTIFIER_DRY_RUN=false
+   APP_BASE_URL=https://raspberrypi.tailb66afe.ts.net/due-brew
+   ```
+
+5. Restart so the api and notifier read it:
+   `docker compose up -d --force-recreate api notifier`
+6. On each phone: **Settings → Send test email**. It should arrive within a
+   minute (check spam the first time and mark it "not spam"). If it fails,
+   the reason is shown right there and in the notification log.
+7. Check the notifier is ticking: **Settings → System status** should say
+   "running", and `docker compose logs notifier` should show
+   `ticking every 300s; SMTP via smtp.gmail.com`.
+
+How reminders behave (details in `claude.md` and `TASKS.md` decisions 20-25):
+
+- Sent at each person's chosen hour, by default 3 days before and on the
+  due date; one overdue email the morning after if it's still unpaid
+  (digest users see overdue bills in the digest for up to 7 days).
+- If the Pi was off, reminders up to 48 hours late are still sent, marked
+  "(late)"; older ones are logged as skipped, never sent days late.
+- A failed send is retried after 5, 15, 45 and 120 minutes, then given up
+  and shown as failed in the log.
+- Never sent twice, with one deliberate exception: if the Pi crashes in the
+  instant after Gmail accepted an email but before it was recorded, that one
+  email is sent again on recovery.
+
+To pause all emails (e.g. while testing), set `NOTIFIER_DRY_RUN=true` and
+recreate the notifier: it then logs what it would send instead.
+
 ## Later sections (to be completed)
 
-- M3: create the house Gmail account + app password, fill SMTP values, send a test email
 - M4: back up and restore the Postgres volume

@@ -7,8 +7,8 @@ it anytime (drop a line under **Inbox** and it gets picked up).
 **Legend**: `[x]` done and tested · `[ ]` to do · `[~]` built, waiting on an
 owner step · 🧪 = the test(s) that prove it · 👤 = only the owner can do it
 
-**Current milestone: M2 (bills)**: built and tested locally, ready to try.
-M1 is in a PR; M0 still waits on the owner's Pi deploy steps below.
+**Current milestone: M3 (email reminders)**: built and tested locally, ready
+to try. M1 and M2 are merged; M0 still waits on the owner's Pi deploy steps below.
 
 ## Inbox
 
@@ -20,10 +20,10 @@ _Add tasks, bugs or ideas here; they get triaged into a milestone._
 
 | Command | What it checks | Last run |
 |---|---|---|
-| `bash scripts/test-backend.sh` | ruff lint + format, pytest on Python 3.12 against a throwaway Postgres 16 | 2026-10-10: 105 passed |
-| `bash scripts/run-local.sh` | not a test: runs the app at http://localhost:8080/due-brew/ as Alice (`--as bob`, `stop`, `reset`, `logs`) | |
+| `bash scripts/test-backend.sh` | ruff lint + format, pytest on Python 3.12 against a throwaway Postgres 16 | 2026-10-10: 182 passed |
+| `bash scripts/run-local.sh` | not a test: runs the app at http://localhost:8080/due-brew/ as Alice (`--as bob`, `stop`, `reset`, `logs`); emails land in http://localhost:8025 | |
 | `bash scripts/test-frontend.sh` | oxlint, `tsc` type-check, production build (node 22) | 2026-10-10: pass |
-| `bash scripts/e2e-local.sh` | whole stack in Docker behind a real Caddy using `ops/caddy/due-brew.caddy` | 2026-10-10: 20/20 checks |
+| `bash scripts/e2e-local.sh` | whole stack in Docker behind a real Caddy using `ops/caddy/due-brew.caddy` | 2026-10-10: 29/29 checks |
 | `bash deploy/test/test_deploy.sh` (Linux/CI) | deploy script vs fake GitHub API and fake docker | 2026-10-10: 24/24 checks |
 
 All four run in containers, so they behave the same on the laptop, in CI and
@@ -145,22 +145,53 @@ On branch `feature/m2-bills` (stacked on M1).
 
 ## M3: Email reminders
 
-- [ ] Migration: `notification_log` (+ `claimed_at`), unique indexes incl.
-      partial digest index
-- [ ] `EmailSender` interface, SMTP impl (587 STARTTLS), fake for tests, dry run
-- [ ] Jinja2 templates (text + HTML), subjects per spec
-- [ ] Tick: generate → find due → claim (`ON CONFLICT DO NOTHING`) → send → record
-- 🧪 Notifier tests (all with `NOW_OVERRIDE` + fake sender):
-  - [ ] right day and hour; paid gets none
-  - [ ] two ticks in a row send nothing twice
-  - [ ] stale pending re-sent after `STALE_PENDING_MINUTES`; two concurrent
-        ticks can't both re-claim it
-  - [ ] catch-up within 48h (marked late), older skipped + logged
-  - [ ] digest grouping incl. overdue; individual-mode single overdue email
-  - [ ] retry with backoff, give up after 5
-- [ ] `PATCH /me`, `GET /notifications`, `POST /notifications/test`
-- [ ] Settings page: preferences, send test email, notification log
-- [ ] 👤 Gmail account + app password; real test email received by both
+On branch `feature/m3-reminders`. Planned at 33 points in 9 commits; done in
+those 9 plus a line-endings cleanup.
+
+| # | Commit | Points |
+|---|---|---|
+| 1 | `notification_log` table + idempotency indexes | 2 |
+| 2 | EmailSender: SMTP, dry run, fake | 2 |
+| 3 | Jinja2 templates + spec subjects | 3 |
+| 4 | Reminder planner (pure) | 5 |
+| 5 | Claim / send / record, retries, digests | 8 |
+| 6 | Notifier tick in the worker + Mailpit | 3 |
+| 7 | `PATCH /me`, `/notifications`, test email API | 3 |
+| 8 | Settings page | 5 |
+| 9 | Docs | 2 |
+
+- [x] Migration `0004`: `notification_log` with `claimed_at`, partial unique
+      indexes (reminder: occurrence+rule+user; overdue: occurrence+user;
+      digest: user+day)   🧪 `test_notification_log.py`
+- [x] `EmailSender` interface; SMTP (STARTTLS + login), dry run (no bodies,
+      no password in logs), fake   🧪 `test_email_sender.py`
+- [x] Templates text + HTML; subjects per spec, "(late)", "amount not set"
+      🧪 `test_email_compose.py`
+- [x] Planner: right day + user's hour, 48h catch-up, skip older, overdue
+      window, email on/off, DST day   🧪 `test_planner.py` (14)
+- 🧪 Notifier tests the spec requires (`test_notifier.py`, real Postgres):
+  - [x] right day and hour; every assignee; paid gets none; deactivated / email off gets none
+  - [x] two ticks in a row send nothing twice
+  - [x] a crash-left pending claim is re-sent once after STALE_PENDING_MINUTES;
+        8 concurrent reclaimers → exactly 1 wins; 6 concurrent claimers → 1 row
+  - [x] catch-up within 48h sent "(late)"; older skipped + logged
+  - [x] digest grouping incl. overdue; overdue repeats daily for 7 days in
+        digests; individual mode gets one overdue email; mode switch doesn't repeat
+  - [x] retry with backoff; give up after 5; paid-before-retry → skipped
+  - [x] sabotage check: removing the stale cutoff fails 10 tests, removing
+        ON CONFLICT fails 6
+- [x] Notifier container runs real ticks; `--once`; heartbeat each tick
+- [x] `PATCH /me`, `GET /notifications`, `POST /notifications/test`
+      🧪 `test_settings_api.py`
+- [x] Settings page: preferences, send test email, System status (heartbeat
+      "running" / "not running?"), notification log
+- [x] Mailpit inbox for local runs (http://localhost:8025), never on the Pi
+- [x] e2e through Caddy + real SMTP into Mailpit: bill due today → two ticks →
+      exactly one email; test email; log (29/29)
+- [x] `DEPLOY.md` §6: Gmail app password, test email, how reminders behave
+- [ ] 👤 Gmail account + app password on the Pi; a real test email received
+      by both housemates
+- [ ] 👤 No duplicate or missed reminders over the first real week (M4)
 
 ## M4: Hardening
 
@@ -204,6 +235,16 @@ Each one is easy to change; say so if you disagree.
 | 17 | Occurrence `amount` NULL means "use the bill's amount" | bill amount edits flow to future dues; variable bills and one-off overrides set it explicitly |
 | 18 | Occurrences also sync when bills are listed, not only on save | otherwise the 60-day horizon goes stale until the notifier arrives in M3 |
 | 19 | Upcoming/overdue shows only **active** bills; overdue shows until paid (the 7-day limit applies to reminder emails) | deactivating should stop the nagging |
+| 20 | Individual-mode overdue email: **once**, the morning after the due date (at the user's hour), any time within 7 days | owner, 2026-10-10 |
+| 21 | New log kind **`overdue`** (spec lists reminder / digest) with its own unique index | so an overdue email can't repeat; owner, 2026-10-10 |
+| 22 | Retry backoff **5, 15, 45, 120 min**, give up after the 5th attempt | owner, 2026-10-10 |
+| 23 | Switching email mode mid-day never repeats an email already sent that day | both modes share the reminder rows; owner, 2026-10-10 |
+| 24 | A reminder for a bill that's already overdue is **skipped**, not sent late | the overdue email covers it; avoids "due 1 day ago" |
+| 25 | Digests list overdue bills daily for up to 7 days; no digest on days with nothing to say | spec: "plus overdue unpaid occurrences" |
+| 26 | Log columns beyond the spec: `next_attempt_at` (backoff), `digest_id` (items in a digest), `subject` (log view) | needed for retries and a readable log |
+| 27 | Mailpit, local/e2e only (`ops/local/mailpit.compose.yml`) | owner approved, 2026-10-10; never in the Pi's compose |
+| 28 | Local stacks use their own Caddy network (`CADDY_NETWORK`) | two stacks on one network shared the due-brew-api alias and cross-talked |
+| 29 | Repo-wide LF line endings (`.gitattributes`) | CRLF had crept in from Windows |
 
 ## Risks / things to verify on the real Pi
 

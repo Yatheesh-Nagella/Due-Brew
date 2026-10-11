@@ -95,6 +95,13 @@ mail_count() { curl -fsS "$MAILPIT/api/v1/messages" | grep -o 'Plumber due today
 check "exactly one reminder email reached the inbox" [ "$(mail_count)" = 1 ]
 check "addressed to Alice" body_has '"Address":"alice@example.com"' "$MAILPIT/api/v1/messages"
 
+check "save preferences (digest at 7 PM)" body_has '"notify_mode":"digest","digest_hour":19' "${as_alice[@]}" \
+  -X PATCH -d '{"notify_mode":"digest","digest_hour":19}' "$URL/due-brew/api/me"
+check "send test email" body_has '"status":"sent"' "${as_alice[@]}" -X POST "$URL/due-brew/api/notifications/test"
+check "test email reached the inbox" body_has 'Test email' "$MAILPIT/api/v1/messages"
+check "notification log lists the reminder and the test" \
+  body_has '"kind":"test".*"kind":"reminder"' "${as_alice[@]}" "$URL/due-brew/api/notifications"
+
 echo
 if [ "$FAILS" -ne 0 ]; then
   echo "$FAILS check(s) failed"

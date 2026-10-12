@@ -9,3 +9,5 @@ node_modules/
 frontend/dist/
 .DS_Store
 ops/local/.local-override.env
+ops/local/.local-override.env.next
+ops/local/smtp.env

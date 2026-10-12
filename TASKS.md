@@ -188,8 +188,8 @@ those 9 plus a line-endings cleanup.
 - [x] Mailpit inbox for local runs (http://localhost:8025), never on the Pi
 - [x] e2e through Caddy + real SMTP into Mailpit: bill due today → two ticks →
       exactly one email; test email; log (29/29)
-- [x] `DEPLOY.md` §6: Gmail app password, test email, how reminders behave
-- [ ] 👤 Gmail account + app password on the Pi; a real test email received
+- [x] `DEPLOY.md` §6: Brevo SMTP setup (Gmail as an alternative), test email, how reminders behave
+- [ ] 👤 Brevo account, verified sender and SMTP key on the Pi; a real test email received
       by both housemates
 - [ ] 👤 No duplicate or missed reminders over the first real week (M4)
 
@@ -245,6 +245,8 @@ Each one is easy to change; say so if you disagree.
 | 27 | Mailpit, local/e2e only (`ops/local/mailpit.compose.yml`) | owner approved, 2026-10-10; never in the Pi's compose |
 | 28 | Local stacks use their own Caddy network (`CADDY_NETWORK`) | two stacks on one network shared the due-brew-api alias and cross-talked |
 | 29 | Repo-wide LF line endings (`.gitattributes`) | CRLF had crept in from Windows |
+| 30 | Email via **Brevo** SMTP relay (free, 300/day), not a house Gmail account | Google refused a new account ("phone number used too many times"); owner, 2026-10-12. Config-only: any SMTP provider works |
+| 31 | `ops/local/smtp.env` (gitignored) makes the laptop send real email; the local notifier is stopped then | test the provider before the Pi exists, without bouncing reminders off fake @example.com users |
 
 ## Risks / things to verify on the real Pi
 

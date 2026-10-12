@@ -1,6 +1,6 @@
 """Every email leaves through an EmailSender, so tests can swap in a fake.
 
-SmtpSender    real delivery (Gmail: smtp.gmail.com:587, STARTTLS, app password)
+SmtpSender    real delivery (Brevo: smtp-relay.brevo.com:587, STARTTLS, SMTP key)
 DryRunSender  NOTIFIER_DRY_RUN=true: logs who and what, sends nothing
 FakeSender    tests: records emails, can be told to fail
 """

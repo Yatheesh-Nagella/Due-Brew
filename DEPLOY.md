@@ -1,8 +1,8 @@
 # DEPLOY
 
 First-time setup of Due and Brew on the Pi. Everything here is run **by the
-owner on the Pi**; Claude never runs commands there. This covers M0;
-Gmail, test email and backup/restore sections are completed in M3/M4.
+owner on the Pi**; Claude never runs commands there. This covers
+M0 through M3 (email is section 6); backup/restore comes in M4.
 
 ## 1. Clone and configure
 
@@ -82,39 +82,97 @@ GitHub check on that commit has passed. State lives in `~/.due-brew-deploy/`.
 
 Manual fallback: `cd ~/due-brew && git pull && docker compose up -d --build`.
 
-## 6. Email reminders (Gmail)
+## 6. Email reminders (Brevo)
 
-Reminders go out from a dedicated house Gmail account through an **app
-password**. Never use the account's real password: an app password can only
-send mail and can be revoked on its own.
+Reminders go out through **Brevo**'s SMTP relay (free plan: 300 emails a day;
+two housemates use a handful). The app only speaks standard SMTP, so any
+provider works by changing `.env` (Gmail alternative at the end of this
+section).
 
-1. Create (or pick) the house Gmail account.
-2. Turn on **2-Step Verification** for it (Google Account → Security). App
-   passwords only exist once 2-Step Verification is on.
-3. Google Account → Security → **App passwords** (or visit
-   `myaccount.google.com/apppasswords`), create one called "Due and Brew",
-   and copy the 16-character password.
-4. On the Pi, in `~/due-brew/.env`:
+### Set up Brevo (once)
 
-   ```bash
-   SMTP_HOST=smtp.gmail.com
-   SMTP_PORT=587
-   SMTP_STARTTLS=true
-   SMTP_USERNAME=the-house-account@gmail.com
-   SMTP_PASSWORD=abcdefghijklmnop        # the app password, spaces removed
-   EMAIL_FROM=Due and Brew <the-house-account@gmail.com>
-   NOTIFIER_DRY_RUN=false
-   APP_BASE_URL=https://raspberrypi.tailb66afe.ts.net/due-brew
-   ```
+1. Sign up at **brevo.com** (free plan). Finish any profile/company questions
+   it asks; new accounts can't send until that's done, and occasionally Brevo
+   reviews a new account before enabling sending. If sending fails with an
+   "account not activated / under review" error, that's why: contact their
+   support or wait.
+2. **Verify a sender**: Brevo → **Senders, domains & dedicated IPs** →
+   **Senders** → **Add a sender**. Name it "Due and Brew" and use an email
+   address you can read (e.g. your Gmail); Brevo emails it a code to confirm.
+   Reminders will come *from* this address.
+3. **Get the SMTP credentials**: Brevo → **SMTP & API** → **SMTP** tab. Note
+   the **SMTP server** (`smtp-relay.brevo.com`), **port** (`587`) and your
+   **login** (shown there, often like `abc123@smtp-brevo.com`; it's not
+   necessarily your account email). Click **Generate a new SMTP key**, name it
+   "Due and Brew", and copy it. It's shown once. (It's an **SMTP key**, not an
+   API key.)
 
-5. Restart so the api and notifier read it:
-   `docker compose up -d --force-recreate api notifier`
-6. On each phone: **Settings → Send test email**. It should arrive within a
-   minute (check spam the first time and mark it "not spam"). If it fails,
-   the reason is shown right there and in the notification log.
-7. Check the notifier is ticking: **Settings → System status** should say
-   "running", and `docker compose logs notifier` should show
-   `ticking every 300s; SMTP via smtp.gmail.com`.
+### Optional: try it from the laptop first
+
+On the laptop, copy `ops/local/smtp.env.example` to `ops/local/smtp.env`
+(gitignored), fill in the values, and run `bash scripts/run-local.sh`. In
+http://localhost:8080/due-brew/settings set your **real** email, Save, then
+**Send test email**. This proves the Brevo side works before the Pi is
+involved. Delete `ops/local/smtp.env` afterwards to go back to Mailpit.
+
+### Put it on the Pi
+
+In `~/due-brew/.env` on the Pi (`nano .env`, save with Ctrl+O, Enter,
+Ctrl+X):
+
+```bash
+SMTP_HOST=smtp-relay.brevo.com
+SMTP_PORT=587
+SMTP_STARTTLS=true
+SMTP_USERNAME=abc123@smtp-brevo.com            # the SMTP login from step 3
+SMTP_PASSWORD=xsmtpsib-...                      # the SMTP key from step 3
+EMAIL_FROM=Due and Brew <you@gmail.com>         # the sender verified in step 2
+NOTIFIER_DRY_RUN=false
+APP_BASE_URL=https://raspberrypi.tailb66afe.ts.net/due-brew
+```
+
+Then:
+
+```bash
+chmod 600 .env
+docker compose up -d --force-recreate api notifier
+docker compose logs notifier --tail 5    # "... SMTP via smtp-relay.brevo.com"
+```
+
+### Test from both phones
+
+1. Open **https://raspberrypi.tailb66afe.ts.net/due-brew/settings**, check the
+   **Email** field is your real address (fix it and Save if not).
+2. **Send test email**. It should arrive within a minute or two.
+3. First time: **check spam**, mark it "Not spam" and add the sender to your
+   contacts. Mail sent through a relay "from" a gmail.com address is more
+   likely to be filtered at first; this trains your inbox. Brevo's
+   **Transactional → Logs** page shows whether it was delivered, bounced or
+   blocked.
+4. Your housemate does the same. When both have it, M3's last box is done.
+
+### If the test email fails
+
+The reason shows under the button and in the Settings notification log.
+
+| Error mentions | Fix |
+|---|---|
+| `535` / authentication failed | `SMTP_USERNAME` must be the SMTP **login** from the SMTP tab, `SMTP_PASSWORD` the **SMTP key** (not the account password, not an API key). Recreate api + notifier after editing. |
+| sender not valid / not verified | `EMAIL_FROM` must use the exact address verified in step 2. |
+| account not activated / suspended / under review | Finish the Brevo account setup or contact Brevo support. |
+| timeout / connection refused | The Pi can't reach Brevo: `docker compose exec notifier python -c "import socket; socket.create_connection(('smtp-relay.brevo.com', 587), 5); print('ok')"` |
+| "sent" but nothing arrived | Spam folder, then Brevo → Transactional → Logs. |
+
+Security: the SMTP key lives only in the Pi's `.env` (gitignored, `chmod
+600`). If it leaks, delete it in Brevo → SMTP & API and generate a new one.
+Don't paste it into chats or commits.
+
+### Alternative: Gmail
+
+With a Gmail account that has 2-Step Verification, create an app password at
+myaccount.google.com/apppasswords and use `SMTP_HOST=smtp.gmail.com`,
+`SMTP_USERNAME` and the address in `EMAIL_FROM` = that Gmail address,
+`SMTP_PASSWORD` = the app password without spaces.
 
 How reminders behave (details in `claude.md` and `TASKS.md` decisions 20-25):
 
@@ -126,7 +184,7 @@ How reminders behave (details in `claude.md` and `TASKS.md` decisions 20-25):
 - A failed send is retried after 5, 15, 45 and 120 minutes, then given up
   and shown as failed in the log.
 - Never sent twice, with one deliberate exception: if the Pi crashes in the
-  instant after Gmail accepted an email but before it was recorded, that one
+  instant after the SMTP server accepted an email but before it was recorded, that one
   email is sent again on recovery.
 
 To pause all emails (e.g. while testing), set `NOTIFIER_DRY_RUN=true` and

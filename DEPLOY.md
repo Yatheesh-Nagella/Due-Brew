@@ -8,7 +8,7 @@ M0 through M3 (email is section 6); backup/restore comes in M4.
 
 ```bash
 cd ~
-git clone https://github.com/Yatheesh-Nagella/due-brew.git
+git clone https://github.com/Yatheesh-Nagella/due-brew.git   # HTTPS + lowercase: the timer expects ~/due-brew
 cd due-brew
 cp .env.example .env
 nano .env
@@ -18,7 +18,11 @@ In `.env`, set at least:
 
 - `POSTGRES_PASSWORD`: something random, **and the same value inside
   `DATABASE_URL`** (`openssl rand -hex 24` works).
-- `SEED_USERS`: `login:Name:email` for both housemates. The login is the
+- `SEED_USERS`: `login:Name:email` for both housemates, commas only *between*
+  people, no spaces, e.g.
+  `Alice-Smith@github:Alice:alice@example.com,BobJones@github:Bob:bob@example.com`.
+  Exact logins (case matters) are on login.tailscale.com/admin/users, or run
+  `tailscale whois <device-ip> | grep -i login` on the Pi. The login is the
   person's Tailscale login name (what the admin console shows, e.g.
   `someone@gmail.com` or `someone@github`).
 - `APP_ENV=production`, `TZ=America/Chicago`.
@@ -29,12 +33,26 @@ Leave the SMTP values as placeholders until M3.
 
 Paste the contents of [`ops/caddy/due-brew.caddy`](ops/caddy/due-brew.caddy)
 into `~/caddy/Caddyfile`, inside the same site block as the recipe-box
-routes, **before** any catch-all (`/` homepage) handler. Then reload Caddy:
+routes, **before** any catch-all (`/` homepage) handler. Then validate and
+**restart** Caddy:
 
 ```bash
 cd ~/caddy
-docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
-# (or: docker compose restart caddy)
+docker compose exec caddy caddy validate --config /etc/caddy/Caddyfile
+docker compose restart caddy
+docker compose exec caddy grep -c due-brew /etc/caddy/Caddyfile   # > 0
+```
+
+Restart, not just `caddy reload`: the Caddyfile is mounted into the container
+as a single file, and editors like vim save by replacing the file, so the
+container keeps seeing the old copy and a reload silently re-applies the old
+routes (that's what happened on the first deploy: `/due-brew/...` returned the
+homepage's 404). The `grep` proves the container sees the new routes.
+
+Add a card to the homepage (`~/caddy/homepage/index.html`):
+
+```html
+  <li><a href="/due-brew/">Due and Brew<small>Groceries and house bills</small></a></li>
 ```
 
 If `~/caddy` is the `caddy-config` repo, commit the change there too.

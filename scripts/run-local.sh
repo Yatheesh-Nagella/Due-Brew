@@ -8,6 +8,9 @@
 #   scripts/run-local.sh logs        # follow api + notifier logs
 #   scripts/run-local.sh stop        # stop everything (keeps data)
 #   scripts/run-local.sh reset       # stop and delete local data
+# With ops/local/smtp.env present (see smtp.env.example), emails go out for
+# real through that SMTP server instead of Mailpit, and the notifier is
+# stopped so only Settings -> "Send test email" sends.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -41,13 +44,29 @@ case "${1:-}" in
 esac
 
 docker network inspect "$CADDY_NETWORK" >/dev/null 2>&1 || docker network create "$CADDY_NETWORK" >/dev/null
-if [ -n "${DEV_USER_LOGIN:-}" ]; then
-  # Rewrite the identity into a temporary env file so containers pick it up.
+SMTP_FILE="$ROOT/ops/local/smtp.env"
+if [ -n "${DEV_USER_LOGIN:-}" ] || [ -f "$SMTP_FILE" ]; then
+  # Build a temporary env file (gitignored) from local.env plus overrides.
   tmp="$ROOT/ops/local/.local-override.env"
-  sed "s/^DEV_USER_LOGIN=.*/DEV_USER_LOGIN=$DEV_USER_LOGIN/" "$ROOT/ops/local/local.env" >"$tmp"
+  cp "$ROOT/ops/local/local.env" "$tmp"
+  if [ -n "${DEV_USER_LOGIN:-}" ]; then
+    sed -i "s/^DEV_USER_LOGIN=.*/DEV_USER_LOGIN=$DEV_USER_LOGIN/" "$tmp"
+  fi
+  if [ -f "$SMTP_FILE" ]; then
+    # Drop the keys smtp.env sets, then append it, so its values win.
+    keys=$(grep -oE '^[A-Z_]+=' "$SMTP_FILE" | tr -d '=' | paste -sd'|' -)
+    grep -vE "^(${keys})=" "$tmp" >"$tmp.next" || true
+    cat "$tmp.next" "$SMTP_FILE" >"$tmp"
+    rm -f "$tmp.next"
+  fi
   export DUE_BREW_ENV_FILE=ops/local/.local-override.env
 fi
 compose up -d --build --wait
+if [ -f "$SMTP_FILE" ]; then
+  # Local test bills belong to fake @example.com users; don't let reminders
+  # bounce off a real SMTP account.
+  compose stop notifier >/dev/null 2>&1
+fi
 
 docker rm -f "$CADDY" >/dev/null 2>&1 || true
 MSYS_NO_PATHCONV=1 docker run -d --name "$CADDY" --network "$CADDY_NETWORK" -p 127.0.0.1:8080:80 \
@@ -59,6 +78,11 @@ for _ in $(seq 1 30); do curl -fs "${URL}api/health" >/dev/null 2>&1 && break; s
 echo
 echo "Due and Brew is running: $URL"
 echo "  API docs:  ${URL}api/docs"
-echo "  inbox:     http://localhost:8025  (every email the app sends lands here)"
+if [ -f "$SMTP_FILE" ]; then
+  echo "  email:     REAL, via $(grep -E '^SMTP_HOST=' "$SMTP_FILE" | cut -d= -f2) (ops/local/smtp.env); notifier stopped"
+  echo "             set your real address in Settings, then press Send test email"
+else
+  echo "  inbox:     http://localhost:8025  (every email the app sends lands here)"
+fi
 echo "  logs:      scripts/run-local.sh logs"
 echo "  stop:      scripts/run-local.sh stop"

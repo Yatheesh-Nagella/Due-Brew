@@ -130,10 +130,10 @@ Each tick, in order:
 3. Claim before sending. Insert a notification_log row with status pending using INSERT ... ON CONFLICT DO NOTHING. Rows to send are: rows this tick actually inserted, failed rows eligible for retry, and stale pending rows whose claim is older than STALE_PENDING_MINUTES (default 10), which a crash left behind. Re-claim stale rows atomically (UPDATE ... WHERE status = 'pending' AND claimed_at < cutoff RETURNING) so two ticks cannot both take one.
 4. Send. Individual mode sends one email per claimed row; digest mode groups the user's claimed rows for the day into one email under a single digest log row.
 5. Record the result. Set sent with sent_at, or failed with attempts + 1 and last_error. Retry failed rows on later ticks with backoff, up to 5 attempts.
-Delivery guarantee: at-least-once. A crash after Gmail accepts an email but before the row is marked sent can cause one duplicate on recovery. That is deliberate: a rare duplicate reminder is better than a silently missed bill. Add a claimed_at column to notification_log for this.
+Delivery guarantee: at-least-once. A crash after the SMTP server accepts an email but before the row is marked sent can cause one duplicate on recovery. That is deliberate: a rare duplicate reminder is better than a silently missed bill. Add a claimed_at column to notification_log for this.
 Catch-up: if the Pi was off, reminders whose send date fell within the last CATCHUP_HOURS (default 48) and have no log row are still sent, marked late in the subject. Older missed ones are skipped and logged as skipped, never sent days late.
 Email delivery:
-• SMTP through a dedicated house Gmail account with an app password: smtp.gmail.com, port 587, STARTTLS. Use the standard library smtplib or aiosmtplib.
+• SMTP through Brevo's free SMTP relay (decided 2026-10-12; Google blocked creating a house Gmail account): smtp-relay.brevo.com, port 587, STARTTLS, Brevo SMTP login + SMTP key, from a verified sender address. Any SMTP provider works through the same env vars. Use the standard library smtplib or aiosmtplib.
 • Send multipart emails: plain text plus simple HTML, rendered from Jinja2 templates in the repo.
 • Subjects: [due-brew] Rent due in 3 days ($1,200 on Oct 1); digests: [due-brew] 2 bills need attention today.
 • All SMTP calls go through an EmailSender interface so tests can swap in a fake.
@@ -204,7 +204,7 @@ APP_BASE_URL
 https://raspberrypi.tailb66afe.ts.net/due-brew
 notifier (links in emails)
 SMTP_HOST, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD
-smtp.gmail.com, 587, house address, app password
+smtp-relay.brevo.com, 587, Brevo SMTP login, SMTP key
 notifier, api (test email)
 EMAIL_FROM
 Due and Brew <house address>
@@ -233,7 +233,7 @@ CI (GitHub Actions on every push and PR): Python lint (ruff), tests, frontend li
 Deployment deliverables for the owner to apply:
 • The Caddy route block for /due-brew and /due-brew/api, as a ready-to-paste snippet or a PR description for caddy-config.
 • The change needed so the existing systemd deploy timer also covers this repo (follow how it handles recipe-box).
-• A DEPLOY.md with first-time steps: create .env from .env.example, create the Gmail app password, seed users, run migrations, send a test email, and how to back up the Postgres volume.
+• A DEPLOY.md with first-time steps: create .env from .env.example, set up Brevo SMTP (or another provider), seed users, run migrations, send a test email, and how to back up the Postgres volume.
 Milestones
 Five milestones, each deployable on its own. Do not start one until the previous one's boxes are all ticked.
 M0: Skeleton deployed
@@ -268,5 +268,6 @@ Open decisions for the owner:
 [x] Final app name and URL path (decided: "Due and Brew", path /due-brew)
 [ ] Reuse recipe-box's Postgres container with a separate database, or run a dedicated db container (decided: dedicated)
 [ ] Roommate's Tailscale login and email address, for SEED_USERS
-[ ] House Gmail account created and app password generated
+[x] Email provider: Brevo SMTP relay instead of a house Gmail account (decided 2026-10-12)
+[ ] Brevo account created, sender verified, SMTP key generated
 [ ] Default reminder rules (spec assumes 3 days before and on the due day) and default digest hour

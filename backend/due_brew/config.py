@@ -47,11 +47,11 @@ def get_settings() -> Settings:
         catchup_hours=int(os.environ.get("CATCHUP_HOURS", "48")),
         stale_pending_minutes=int(os.environ.get("STALE_PENDING_MINUTES", "10")),
         app_base_url=os.environ.get("APP_BASE_URL", "http://localhost:8080/due-brew").rstrip("/"),
-        smtp_host=os.environ.get("SMTP_HOST", "smtp.gmail.com"),
+        smtp_host=os.environ.get("SMTP_HOST", "smtp-relay.brevo.com"),
         smtp_port=int(os.environ.get("SMTP_PORT", "587")),
         smtp_username=os.environ.get("SMTP_USERNAME") or None,
         smtp_password=os.environ.get("SMTP_PASSWORD") or None,
-        # Gmail needs STARTTLS; a local Mailpit inbox doesn't offer it.
+        # Brevo and Gmail need STARTTLS; a local Mailpit inbox doesn't offer it.
         smtp_starttls=_bool(os.environ.get("SMTP_STARTTLS", "true")),
         email_from=os.environ.get("EMAIL_FROM", "Due and Brew <due-brew@example.com>"),
         seed_users=os.environ.get("SEED_USERS", ""),

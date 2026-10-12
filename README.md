@@ -37,7 +37,7 @@ bash scripts/e2e-local.sh         # full stack behind Caddy; KEEP=1 to leave it 
 ```
 
 Every email the local app sends lands in a Mailpit inbox at
-<http://localhost:8025> (local only; the Pi sends through Gmail, see
+<http://localhost:8025> (local only; the Pi sends through Brevo, see
 `DEPLOY.md` §6).
 
 `KEEP=1 bash scripts/e2e-local.sh` serves the app at

@@ -7,8 +7,9 @@ it anytime (drop a line under **Inbox** and it gets picked up).
 **Legend**: `[x]` done and tested · `[ ]` to do · `[~]` built, waiting on an
 owner step · 🧪 = the test(s) that prove it · 👤 = only the owner can do it
 
-**Current milestone: M3 (email reminders)**: built and tested locally, ready
-to try. M1 and M2 are merged; M0 still waits on the owner's Pi deploy steps below.
+**Live on the Pi since 2026-10-12.** M0–M3 merged and deployed; auto-deploy
+timer installed. Open: the housemate's first login, test emails from the Pi on both
+phones, then M4 (backups + a week of real use).
 
 ## Inbox
 
@@ -60,12 +61,18 @@ its name, which is another reason the frontend checks run in Docker.)
       compose build **for arm64 under QEMU**, shellcheck + deploy tests
 - [x] Deploy: `deploy/deploy.sh` + `due-brew-deploy.{service,timer}` copied
       from recipe-box (no host port, so the post-deploy check goes through Caddy)
-- [~] 👤 Push to GitHub and turn on branch protection (see Owner steps)
-- [~] 👤 First deploy on the Pi + Caddy route + `install.sh` (see `DEPLOY.md`)
-- [ ] Verify `/due-brew` loads on the tailnet and `/me` is right **from both
-      housemates' phones**: this is the real proof that `tailscale serve` sends
-      the header (see Risk 1 below)
-- [ ] CI green on GitHub, including the arm64 build (first run happens on push)
+- [x] 👤 Pushed to GitHub (`Yatheesh-Nagella/Due-Brew`); PRs #1–#4 merged through CI
+- [ ] 👤 Branch protection on `main` (require PR + the four checks), if not done yet
+- [x] 👤 First deploy on the Pi (2026-10-12): `~/due-brew`, Caddy route,
+      homepage card, `install.sh` timer running
+- [x] `/due-brew` loads on the tailnet and greets the owner by name from
+      their phone: `tailscale serve` → Caddy → API identity works end to end
+- [ ] Same from the housemate's phone (invited as a tailnet user)
+- [x] CI green on GitHub, including the arm64 build
+- First-deploy lessons (now in `DEPLOY.md`): clone over HTTPS into lowercase
+  `~/due-brew`; `DATABASE_URL` must carry `POSTGRES_PASSWORD`; `SEED_USERS` is
+  `login:Name:email` with logins like `Someone@github`; Caddy mounts the single
+  Caddyfile, so after editing with vim **restart** Caddy (reload kept the old file)
 
 ## M1: Grocery and inventory ledger
 

@@ -8,8 +8,8 @@ it anytime (drop a line under **Inbox** and it gets picked up).
 owner step · 🧪 = the test(s) that prove it · 👤 = only the owner can do it
 
 **Live on the Pi since 2026-10-12.** M0–M3 merged and deployed; auto-deploy
-timer installed. Open: the housemate's first login, test emails from the Pi on both
-phones, then M4 (backups + a week of real use).
+timer installed. Both housemates recognized. Open: test emails from the Pi on
+both phones, then M4 (backups + a week of real use).
 
 ## Inbox
 
@@ -67,7 +67,8 @@ its name, which is another reason the frontend checks run in Docker.)
       homepage card, `install.sh` timer running
 - [x] `/due-brew` loads on the tailnet and greets the owner by name from
       their phone: `tailscale serve` → Caddy → API identity works end to end
-- [ ] Same from the housemate's phone (invited as a tailnet user)
+- [x] Same from the housemate's phone (2026-10-12; invited as a tailnet user;
+      needed to sign in to the Tailscale app with the invite's account)
 - [x] CI green on GitHub, including the arm64 build
 - First-deploy lessons (now in `DEPLOY.md`): clone over HTTPS into lowercase
   `~/due-brew`; `DATABASE_URL` must carry `POSTGRES_PASSWORD`; `SEED_USERS` is
@@ -107,7 +108,7 @@ branch `feature/m1-grocery-ledger`.
       delete it, "+ Add item" form, Categories section (add, rename, ↑↓, delete)
 - [x] "added by Alice · updated by Bob" shown on every item
 - [ ] 👤 Try it locally (`bash scripts/run-local.sh`) and say what to change
-- [ ] 👤 Both housemates use it from their phones (after the Pi deploy)
+- [x] 👤 Both housemates in from their phones (2026-10-12)
 - Ideas, not committed to: suggest a category on quick add from past items;
   swipe-to-buy on the List page
 

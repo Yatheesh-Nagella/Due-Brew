@@ -85,6 +85,12 @@ docker compose logs api | grep -E "api/me|unknown Tailscale login"
   `docker compose restart api` (the seed runs on start and is insert-only; it adds the new login).
 - 401: no header arrived at all. Check the device isn't a *tagged* device
   and that the request goes through `tailscale serve`, not straight to the Pi's IP.
+- The site doesn't load at all on a housemate's phone: their Tailscale app is
+  probably signed in to a *different* account (e.g. Google) than the one they
+  accepted the tailnet invite with (e.g. GitHub), which puts them in their own
+  separate tailnet. In the app: log out, log in with the invite's account,
+  pick your tailnet. Their phone then appears in `tailscale status` on the Pi.
+  (The email address the invite was sent to doesn't matter.)
 
 ## 5. Turn on automatic deploys
 
